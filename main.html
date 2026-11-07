@@ -134,9 +134,25 @@
         }
 
         /* Misplaced layout elements */
-        #status, #video-container, #security-box, .controls { 
+        #status, #video-container, #security-box { 
             position: relative; 
             transition: left .4s, top .4s, transform .4s; 
+        }
+
+        .controls {
+            position: relative;
+            z-index: 999999; /* Ensure controls and play button sit on top of everything */
+            background: cyan; 
+            padding: 15px; 
+            display: flex; 
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-around; 
+            gap: 10px;
+            border: 5px solid red;
+            width: min(640px, 94vw);
+            margin: 0 auto;
+            transition: left .4s, top .4s, transform .4s;
         }
 
         #security-box {
@@ -167,19 +183,6 @@
             font-weight: bold;
         }
         
-        .controls { 
-            background: cyan; 
-            padding: 15px; 
-            display: flex; 
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-around; 
-            gap: 10px;
-            border: 5px solid red;
-            width: min(640px, 94vw);
-            margin: 0 auto;
-        }
-        
         .main-btn { 
             background: orange; 
             border: 3px solid brown; 
@@ -187,7 +190,8 @@
             font-size: 17px;
             font-family: "Comic Sans MS", cursive;
             cursor: crosshair; 
-            transition: transform 0.1s;
+            transition: transform 0.1s, left 0.2s ease, top 0.2s ease;
+            z-index: 1000000; /* Always on top */
         }
         
         #play-btn:hover { 
@@ -394,7 +398,7 @@
 
     <!-- CONTROLS -->
     <div class="controls">
-        <button id="play-btn" class="main-btn" type="button">PLAY</button>
+        <button id="play-btn" class="main-btn" type="button">PLAY / PAUSE</button>
         <button id="skip-btn" class="main-btn" type="button">+10s</button>
         <select id="sub-lang">
             <option value="en" selected>English</option>
@@ -480,6 +484,7 @@
         let sequenceCompleted = false;
         let adCount = 0;
         let lastMoveTime = 0;
+        let playButtonTired = false;
 
         let totalPlayTime = 0;
         let lastAdTrigger = 0;
@@ -504,7 +509,7 @@
             });
         }
         scatter(true);
-        [playBtn, skipBtn, unlockBtn].forEach(b => b.addEventListener("click", () => scatter(false)));
+        [skipBtn, unlockBtn].forEach(b => b.addEventListener("click", () => scatter(false)));
 
         // Step 1: Ominous popup handling
         try {
@@ -524,7 +529,7 @@
 
         // Mandatory Talabat Video Ad Trigger
         function triggerTalabatAd() {
-            if (!isPlayingCountdown && !isPlayingSlideshow) video.pause();
+            if (!isPlayingCountdown && !isPlayingSlideshow && sequenceCompleted) video.pause();
             adModal.style.display = "flex";
             closeAdBtn.style.display = "block";
             closeAdBtn.classList.remove("unlocked");
@@ -602,7 +607,7 @@
             adModal.style.display = 'none';
             closeAdBtn.style.display = 'none';
 
-            if (unlocked && hasStartedSequence && sequenceCompleted && !isPlayingCountdown && !isPlayingSlideshow && video.paused) {
+            if (sequenceCompleted && video.paused) {
                 lastTimestamp = performance.now();
                 video.play();
             }
@@ -650,7 +655,7 @@
             if (event.key === "Enter") unlockBtn.click();
         });
 
-        // Security Check Passed -> Play Cat Video first
+        // Security Check Passed -> Auto-start sequence
         function startSecuritySequence() {
             if (hasStartedSequence) return;
             hasStartedSequence = true;
@@ -697,11 +702,15 @@
                         } else {
                             clearInterval(slideInterval);
                             slideshowOverlay.style.display = 'none';
+
+                            // RIGHT AFTER THE 2ND IMAGE (or end of gallery), trigger Talabat Ad as requested:
+                            triggerTalabatAd();
+
                             video.style.display = 'block';
                             isPlayingSlideshow = false;
                             sequenceCompleted = true;
 
-                            // Switch to the final Banana Video after the 10s picture sequence
+                            // Switch to the final Banana Video after the sequence
                             videoSource.src = bananaVideoPath;
                             video.load();
                             video.currentTime = 0;
@@ -709,26 +718,37 @@
                         }
                     }, frameInterval);
                 }, { once: true });
-            } else {
             }
         });
 
+        // Runaway Play Button logic ONLY active once banana video starts
+        playBtn.addEventListener('mouseover', () => {
+            if (!sequenceCompleted || playButtonTired) return;
+
+            playBtn.style.position = 'fixed';
+            const maxX = window.innerWidth - playBtn.offsetWidth - 30;
+            const maxY = window.innerHeight - playBtn.offsetHeight - 30;
+            
+            const randomX = Math.max(30, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(30, Math.floor(Math.random() * maxY));
+            
+            playBtn.style.left = randomX + 'px';
+            playBtn.style.top = randomY + 'px';
+
+            playButtonTired = true;
+            setTimeout(() => { playButtonTired = false; }, 600); // Easy-to-press delay
+        });
+
         playBtn.addEventListener('click', () => {
-            if (!unlocked) {
-                alert("You must complete the security check first!");
+            if (!sequenceCompleted) {
+                alert("The play/pause button cannot be used until the actual banana video starts!");
                 return;
             }
-            if (!hasStartedSequence) {
-                startSecuritySequence();
-                return;
-            }
-            if (!isPlayingCountdown && !isPlayingSlideshow && sequenceCompleted) {
-                if (video.paused) {
-                    lastTimestamp = performance.now();
-                    video.play();
-                } else {
-                    video.pause();
-                }
+            if (video.paused) {
+                lastTimestamp = performance.now();
+                video.play();
+            } else {
+                video.pause();
             }
         });
 
@@ -843,8 +863,8 @@
         });
 
         skipBtn.addEventListener("click", () => {
-            if (!unlocked) {
-                alert("You must complete the security check first!");
+            if (!sequenceCompleted) {
+                alert("You can only use skip after the banana video starts!");
                 return;
             }
             if (busy) return;
@@ -859,14 +879,9 @@
             plinkoMsg.textContent = "Nice try. Drop the disc.";
         });
 
-        // Subtitles + 10s Enforced Ad Break Loop (Starts after 10s picture sequence completes)
-        const subtitlesData = [
-            { start: 0, end: 3, text: "Clap, clap, clap, clap, clap" },
-            { start: 3.5, end: 7, text: "Cat clapping continuously..." }
-        ];
-
+        // 10s Enforced Ad Break Loop (Starts after banana video starts)
         video.addEventListener('timeupdate', () => {
-            if (video.paused || !unlocked || isPlayingCountdown || isPlayingSlideshow || !sequenceCompleted) return;
+            if (video.paused || !sequenceCompleted || isPlayingCountdown || isPlayingSlideshow) return;
 
             const now = performance.now();
             if (lastTimestamp) {
@@ -878,10 +893,6 @@
                 lastAdTrigger = totalPlayTime;
                 triggerTalabatAd();
                 return;
-            }
-
-            if (videoSource.src.includes("banana.mp4.mp4")) {
-                subDisplay.innerText = "";
             }
         });
 
@@ -935,12 +946,12 @@
             }, 18000);
         }
 
-        // Trigger a burst of 3 fake ads every 10 seconds (only after sequence is fully completed):
+        // Trigger a burst of 3 fake ads every 10 seconds (only after banana video starts):
         window.setInterval(() => {
-            if (unlocked && sequenceCompleted && !video.paused) {
+            if (sequenceCompleted && !video.paused) {
                 for (let i = 0; i < 3; i++) {
                     window.setTimeout(() => {
-                        if (unlocked && sequenceCompleted) {
+                        if (sequenceCompleted) {
                             maybeShowAd("timer", i > 0); 
                         }
                     }, i * 600);
