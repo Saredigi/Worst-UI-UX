@@ -22,6 +22,7 @@
             margin: 0;
             padding: 20px 12px 60px;
             animation: flashBackground 0.8s infinite;
+            overflow-x: hidden;
         }
 
         #status { font-family: "Courier New", monospace; font-size: 14px; font-weight: bold; margin: 12px; color: #000; background: yellow; display: inline-block; padding: 4px 10px; border: 2px solid black; }
@@ -58,6 +59,15 @@
             display: block;
             object-fit: cover;
         }
+
+        #introPlayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 52;
+            display: none;
+            pointer-events: none;
+        }
         
         #subtitles { 
             position: absolute; 
@@ -81,7 +91,19 @@
             background: #000 url('image_783f37.jpg') no-repeat center center;
             background-size: cover;
             z-index: 50;
-            pointer-events: none;
+        }
+
+        #slideshow-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-color: black;
+            z-index: 55;
+            display: none;
         }
 
         #security-box {
@@ -94,7 +116,6 @@
             font-size: 20px;
             width: min(640px, 94vw);
             margin: 0 auto 30px auto;
-            box-sizing: border-box;
         }
 
         #unlock-input {
@@ -126,7 +147,6 @@
             border: 5px solid red;
             width: min(640px, 94vw);
             margin: 0 auto;
-            box-sizing: border-box;
         }
         
         .main-btn { 
@@ -136,11 +156,8 @@
             font-size: 18px;
             font-family: "Comic Sans MS", cursive;
             cursor: crosshair; 
-            transition: transform 0.1s;
-        }
-        
-        #play-btn:hover { 
-            transform: translate(15px, -15px) rotate(10deg); 
+            z-index: 100;
+            transition: transform 0.1s, left 0.2s ease, top 0.2s ease;
         }
 
         select {
@@ -202,7 +219,6 @@
         .ad-header { background: #ff5a00; color: white; font-weight: bold; padding: 10px; font-size: 20px; }
         .ad-video-wrapper video { width: 100%; height: 360px; pointer-events: none; }
 
-        /* SMOOTH & CATCHABLE MOVING SKIP AD BUTTON */
         #closeAdBtn {
             position: fixed; z-index: 1000000;
             background: yellow; color: black; border: 4px solid red;
@@ -218,8 +234,7 @@
             width: min(85vw, 680px); min-height: min(60vh, 420px);
             background: #fff8a8; color: #241324; border: 8px ridge #ff39c8;
             box-shadow: 12px 12px 0 rgba(0,0,0,.6); padding: 25px;
-            text-align: center; font-family: "Comic Sans MS", cursive;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;
             animation: adJiggle .25s ease-in-out 2;
         }
         .ad-popup h3 { margin: 10px 0; color: #e00091; font-size: clamp(24px, 5vw, 36px); }
@@ -243,7 +258,7 @@
 
     <p id="status">PLAYER STATUS: WAITING FOR AUTHORIZATION</p>
 
-    <!-- 1. OMINOUS WELCOME POPUP -->
+    <!-- OMINOUS WELCOME POPUP -->
     <div id="welcome-popup">
         <div class="popup-box">
             <div class="warning-icon">⚠</div>
@@ -251,27 +266,28 @@
             <h2>YOU WERE NOT SUPPOSED TO BE HERE.</h2>
             <div class="popup-divider"></div>
             <p>An unauthorized session has been detected.</p>
-            <p>
-                Do not attempt to close this window.<br>
-                Do not refresh the page.<br>
-                Do not trust what you see.
-            </p>
+            <p>Do not attempt to close this window.<br>Do not refresh the page.<br>Do not trust what you see.</p>
             <p class="small-warning">WE KNOW YOU ARE HERE.</p>
             <button id="close-popup" type="button">I UNDERSTAND</button>
             <p class="footer-text">SESSION MONITORING ACTIVE...</p>
         </div>
     </div>
 
-    <!-- 2. WEBSITE LEVEL BANNER CAPTION -->
-    <div id="site-caption" class="hidden">
-        YOU DEED EET! 👏
-    </div>
+    <!-- WEBSITE LEVEL BANNER CAPTION -->
+    <div id="site-caption" class="hidden">YOU DEED EET! 👏</div>
 
     <!-- MAIN PLAYER CONTAINER -->
     <div id="video-container">
         <div id="image-overlay"></div>
-        <video id="videoPlayer" playsinline loop muted style="background: black;">
-            <source id="videoSource" src="file:///C:/Users/20230957/Downloads/cat.mp4.mp4" type="video/mp4">
+        
+        <!-- 5-4-3-2-1 countdown video overlay -->
+        <video id="introPlayer" src="file:///C:/Users/20230970/Downloads/intro 5 4 3 2 1 (Old Film).mp4" playsinline></video>
+        
+        <!-- Interruption slideshow overlay -->
+        <div id="slideshow-overlay"></div>
+
+        <video id="videoPlayer" playsinline loop style="background: black;">
+            <source id="videoSource" src="file:///C:/Users/20230970/Downloads/videoplayback.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         <div id="subtitles"></div>
@@ -305,7 +321,6 @@
             <div class="ad-header">🧡 TALABAT SPONSORED AD 🍔</div>
             <video id="talabatAdVideo" playsinline autoplay muted>
                 <source src="file:///C:/Users/20230957/Downloads/talabat_ad.mp4.mp4" type="video/mp4">
-                Your browser does not support video ads.
             </video>
         </div>
     </div>
@@ -316,6 +331,9 @@
     <!-- FAKE PRODUCT AD LAYER -->
     <div id="ad-layer" aria-live="polite"></div>
 
+    <!-- AUDIO ELEMENT FOR QUACK -->
+    <audio id="quackSound" src="file:///C:/Users/20230970/Downloads/Quack%20Sound%20Effect.mp3"></audio>
+
     <script>
     (() => {
         const welcomePopup = document.getElementById("welcome-popup");
@@ -323,12 +341,14 @@
         const siteCaption = document.getElementById("site-caption");
 
         const video = document.getElementById('videoPlayer');
-        const videoSource = document.getElementById('videoSource');
+        const introVideo = document.getElementById('introPlayer');
+        const quack = document.getElementById('quackSound');
         const subDisplay = document.getElementById('subtitles');
         const playBtn = document.getElementById('play-btn');
         const langSelect = document.getElementById('sub-lang');
         
         const imageOverlay = document.getElementById('image-overlay');
+        const slideshowOverlay = document.getElementById('slideshow-overlay');
         const securityBox = document.getElementById('security-box');
         const unlockInput = document.getElementById('unlock-input');
         const unlockBtn = document.getElementById('unlock-btn');
@@ -343,14 +363,22 @@
         const talabatAdVideo = document.getElementById('talabatAdVideo');
         const closeAdBtn = document.getElementById('closeAdBtn');
 
-        const catVideoPath = "file:///C:/Users/20230957/Downloads/cat.mp4.mp4";
-
         let successCount = 0;
         let unlocked = false;
         let adCount = 0;
         let lastMoveTime = 0;
+        let buttonCaught = false; 
+        let buttonTired = false; 
+        let hasShownIntro = false; 
 
-        // Step 1: Ominous popup handling
+        const introImages = [
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142744.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142905.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142929.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142811.png"
+        ];
+
+        // Ominous popup handling
         try {
             if (!sessionStorage.getItem("worstPlayerPopupShown")) {
                 welcomePopup.style.display = "flex";
@@ -371,16 +399,6 @@
             window.setTimeout(() => maybeShowAd("welcome"), 5000);
         });
 
-        // Reversed Volume Logic
-        function updateInvertedVolume() {
-            const sliderValue = Number(volumeSlider.value);
-            const actualVolume = 1 - (sliderValue / 100);
-            video.volume = Math.max(0, Math.min(1, actualVolume));
-            volumeNote.textContent = `Volume ${sliderValue}`;
-        }
-        volumeSlider.addEventListener("input", updateInvertedVolume);
-        updateInvertedVolume();
-
         // Teleporting Skip Button Evasion
         function teleportButton() {
             const now = Date.now();
@@ -399,8 +417,6 @@
         }
 
         closeAdBtn.addEventListener("mouseenter", teleportButton);
-
-        // Close Ad and navigate to Security Check
         talabatAdVideo.addEventListener('ended', closeAdAndShowSecurity);
         closeAdBtn.addEventListener('click', closeAdAndShowSecurity);
 
@@ -410,42 +426,42 @@
             closeAdBtn.style.display = 'none';
         }
 
-        // Step 2: Security check logic (Type "67" 3 times)
+        // Reversed Volume Logic
+        function updateInvertedVolume() {
+            const sliderValue = Number(volumeSlider.value);
+            const actualVolume = 1 - (sliderValue / 100);
+            video.volume = Math.max(0, Math.min(1, actualVolume));
+            volumeNote.textContent = `Volume ${sliderValue}`;
+        }
+        volumeSlider.addEventListener("input", updateInvertedVolume);
+        updateInvertedVolume();
+
+        // Security check logic
         unlockBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (unlocked) return;
-
             const userInput = unlockInput.value.trim();
 
-            if (userInput === "67") {
+            if (userInput === "676767" && successCount === 0) {
+                successCount = 3;
+            } else if (userInput === "67") {
                 successCount++;
-                unlockStatus.textContent = `Progress: ${successCount} / 3`;
-                unlockStatus.style.color = "lime";
                 unlockInput.value = ""; 
-
-                if (successCount >= 3) {
-                    unlocked = true;
-                    imageOverlay.style.display = 'none'; 
-                    securityBox.style.display = 'none';
-                    siteCaption.classList.remove('hidden');
-                    status.textContent = "PLAYER STATUS: AUTHORIZATION ACCEPTED";
-
-                    // Load and play Cat Video
-                    videoSource.src = catVideoPath;
-                    video.load();
-                    video.muted = false;
-
-                    const playPromise = video.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => console.log("Cat video auto-play blocked by browser."));
-                    }
-                    maybeShowAd("unlock");
-                }
             } else {
+                alert("WRONG! Starting over.");
                 successCount = 0;
                 unlockInput.value = "";
-                unlockStatus.textContent = "WRONG. Progress reset: 0 / 3";
-                unlockStatus.style.color = "yellow";
+            }
+
+            unlockStatus.textContent = `Progress: ${successCount} / 3`;
+
+            if (successCount >= 3) {
+                unlocked = true;
+                unlockStatus.style.color = "lime";
+                imageOverlay.style.display = 'none'; 
+                securityBox.style.display = 'none';
+                siteCaption.classList.remove('hidden');
+                status.textContent = "PLAYER STATUS: AUTHORIZATION ACCEPTED";
             }
         });
 
@@ -453,19 +469,78 @@
             if (event.key === "Enter") unlockBtn.click();
         });
 
-        // Play/Pause Button Logic
+        // Runaway Button Logic
+        playBtn.addEventListener('mouseover', () => {
+            if (!unlocked || buttonCaught || buttonTired) return; 
+
+            playBtn.style.position = 'fixed';
+            const maxX = window.innerWidth - playBtn.offsetWidth - 20;
+            const maxY = window.innerHeight - playBtn.offsetHeight - 20;
+            
+            const randomX = Math.max(20, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(20, Math.floor(Math.random() * maxY));
+            
+            playBtn.style.left = randomX + 'px';
+            playBtn.style.top = randomY + 'px';
+
+            buttonTired = true;
+            setTimeout(() => { buttonTired = false; }, 400);
+        });
+
+        // The Grand Play Sequence (Intro Video -> Slideshow -> Main Video)
         playBtn.addEventListener('click', () => {
             if (!unlocked) {
                 status.textContent = "PLAYER STATUS: ACCESS DENIED";
                 alert("You must unlock the video first by submitting '67' three times!");
                 return;
             }
-            if (video.paused) {
-                video.play();
-                status.textContent = "PLAYER STATUS: PLAYING";
+
+            buttonCaught = true;
+            playBtn.style.position = 'static';
+
+            if (!hasShownIntro) {
+                hasShownIntro = true;
+                status.textContent = "PLAYER STATUS: INITIALIZING SEQUENCE...";
+                
+                // 1. Show and play the countdown intro video
+                introVideo.style.display = 'block';
+                introVideo.play().catch(e => console.log("Intro autoplay blocked"));
+                
+                // 2. Wait for the countdown video to finish
+                introVideo.addEventListener('ended', () => {
+                    introVideo.style.display = 'none';
+                    
+                    // 3. Start the slideshow sequence
+                    slideshowOverlay.style.display = 'block';
+                    let imgIndex = 0;
+                    slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+                    
+                    const slideInterval = setInterval(() => {
+                        imgIndex++;
+                        if (imgIndex < introImages.length) {
+                            slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+                        } else {
+                            // 4. Finish sequence, Quack, and play main video
+                            clearInterval(slideInterval);
+                            slideshowOverlay.style.display = 'none';
+                            quack.play().catch(e => console.log("Quack sound blocked"));
+                            
+                            video.muted = false;
+                            video.play();
+                            status.textContent = "PLAYER STATUS: PLAYING";
+                            maybeShowAd("unlock");
+                        }
+                    }, 1200); // Wait 1.2 seconds per image
+                }, { once: true });
             } else {
-                video.pause();
-                status.textContent = "PLAYER STATUS: PAUSED";
+                // Intro already shown, normal play/pause logic
+                if (video.paused) {
+                    video.play();
+                    status.textContent = "PLAYER STATUS: PLAYING";
+                } else {
+                    video.pause();
+                    status.textContent = "PLAYER STATUS: PAUSED";
+                }
             }
         });
 
