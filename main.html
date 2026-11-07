@@ -1,10 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Worst Video Player Ever</title>
+    <link rel="stylesheet" href="style.css">
     <style>
+
+        
+        /* OMINOUS POPUP */
+
+#welcome-popup {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.97);
+
+    display: none;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 99999;
+}
+
+.popup-box {
+    background: #080808;
+    color: #b5b5b5;
+
+    width: 420px;
+    max-width: 85%;
+
+    padding: 35px;
+    box-sizing: border-box;
+
+    border: 1px solid #5b0000;
+
+    box-shadow: 0 0 30px rgba(150, 0, 0, 0.3);
+
+    font-family: "Courier New", monospace;
+    text-align: center;
+
+    animation: popupAppear 1.5s ease;
+}
+
+.warning-icon {
+    color: darkred;
+    font-size: 55px;
+    animation: warningPulse 2s infinite;
+}
+
+.system-label {
+    color: #720000;
+    font-size: 11px;
+    letter-spacing: 3px;
+}
+
+.popup-box h2 {
+    color: #a00000;
+    font-size: 24px;
+    letter-spacing: 2px;
+    line-height: 1.5;
+}
+
+.popup-divider {
+    height: 1px;
+    background: #4b0000;
+    margin: 25px 0;
+}
+
+.small-warning {
+    color: darkred;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin-top: 30px;
+}
+
+.popup-box button {
+    background: transparent;
+    color: #a00000;
+
+    border: 1px solid #720000;
+
+    padding: 13px 30px;
+    margin-top: 20px;
+
+    font-family: "Courier New", monospace;
+    letter-spacing: 3px;
+
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.popup-box button:hover {
+    background: #720000;
+    color: white;
+    box-shadow: 0 0 20px red;
+}
+
+.footer-text {
+    font-size: 10px;
+    color: #555;
+    margin-top: 30px;
+    letter-spacing: 2px;
+}
+
+@keyframes warningPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+@keyframes popupAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
         body { 
             background-color: #ff00ff; 
             font-family: "Comic Sans MS", "Chalkboard SE", cursive; 
@@ -12,6 +127,7 @@
             margin: 0;
             padding-top: 50px;
         }
+        
         
         #video-container { 
             position: relative; 
@@ -43,7 +159,6 @@
             z-index: 60;
         }
 
-        /* The Standby Image Overlay covering the video */
         #image-overlay {
             position: absolute;
             top: 0;
@@ -110,21 +225,55 @@
             font-size: 18px;
             border: 3px solid purple;
         }
+        
     </style>
 </head>
 <body>
+    <!-- OMINOUS WELCOME POPUP -->
+<div id="welcome-popup">
+
+    <div class="popup-box">
+
+        <div class="warning-icon">⚠</div>
+
+        <p class="system-label">UNKNOWN SYSTEM // SESSION DETECTED</p>
+
+        <h2>YOU WERE NOT SUPPOSED TO BE HERE.</h2>
+
+        <div class="popup-divider"></div>
+
+        <p>An unauthorized session has been detected.</p>
+
+        <p>
+            Do not attempt to close this window.<br>
+            Do not refresh the page.<br>
+            Do not trust what you see.
+        </p>
+
+        <p class="small-warning">WE KNOW YOU ARE HERE.</p>
+
+        <button id="close-popup">
+            I UNDERSTAND
+        </button>
+
+        <p class="footer-text">SESSION MONITORING ACTIVE...</p>
+
+    </div>
+
+</div>
 
     <div id="video-container">
-        <!-- Standby screen covering the video until unlocked -->
         <div id="image-overlay"></div>
-
-        <!-- Make sure 'your-video-file.mp4' is saved in the same folder -->
-        <video id="myVideo" src="your-video-file.mp4" playsinline></video>
+        <!-- Removed 'controls' attribute so users can't bypass the check -->
+        <video id="videoPlayer" playsinline>
+            <source src="videoplayback.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
         <div id="subtitles"></div>
     </div>
     
     <div id="security-box">
-        <p><strong>SECURITY CHECK</strong><br>Type "67" three times to unlock the video!</p>
+        <p><strong>SECURITY CHECK</strong><br>Type "67" and click Submit 3 times to unlock!</p>
         <input type="text" id="unlock-input" placeholder="??">
         <button id="unlock-btn">Submit</button>
         <p id="unlock-status">Progress: 0 / 3</p>
@@ -138,8 +287,27 @@
         </select>
     </div>
 
+   
     <script>
-        const video = document.getElementById('myVideo');
+        const welcomePopup = document.getElementById("welcome-popup");
+const closePopup = document.getElementById("close-popup");
+
+// Check whether popup was already shown this session
+if (!sessionStorage.getItem("popupShown")) {
+
+    welcomePopup.style.display = "flex";
+
+    sessionStorage.setItem("popupShown", "true");
+
+}
+
+// Close popup
+closePopup.addEventListener("click", () => {
+
+    welcomePopup.style.display = "none";
+
+});
+        const video = document.getElementById('videoPlayer');
         const subDisplay = document.getElementById('subtitles');
         const playBtn = document.getElementById('play-btn');
         const langSelect = document.getElementById('sub-lang');
@@ -152,17 +320,15 @@
         
         let successCount = 0;
 
-        // Security check logic
+        // Security check logic: Requires typing "67" and submitting 3 separate times
         unlockBtn.addEventListener('click', () => {
             const userInput = unlockInput.value.trim();
 
-            if (userInput === "676767" && successCount === 0) {
-                successCount = 3;
-            } else if (userInput === "67") {
+            if (userInput === "67") {
                 successCount++;
                 unlockInput.value = ""; 
             } else {
-                alert("WRONG! Starting over.");
+                alert("WRONG! You must type '67'. Starting over.");
                 successCount = 0;
                 unlockInput.value = "";
             }
@@ -170,9 +336,10 @@
             unlockStatus.innerText = "Progress: " + successCount + " / 3";
 
             if (successCount >= 3) {
-                // Reveal the video and remove the red box
+                // Reveal the video, show controls, and remove security box
                 imageOverlay.style.display = 'none'; 
                 securityBox.style.display = 'none';
+                video.controls = true; // Add default controls back after unlock
             }
         });
 
@@ -183,10 +350,10 @@
             { start: 6.5, end: 10, text: "Please let me know if the subtitles look awful." }
         ];
 
-        // Play/Pause logic
+        // Play/Pause button logic
         playBtn.addEventListener('click', () => {
             if (successCount < 3) {
-                alert("You must unlock the video first by typing 67 in the red box!");
+                alert("You must unlock the video first by submitting '67' three times!");
                 return;
             }
             if (video.paused) {
@@ -196,7 +363,7 @@
             }
         });
 
-        // The terrible subtitle filter
+        // Awful subtitle filter (replaces 'l' with 'r')
         function applySubtitleFilter(text) {
             if (langSelect.value === 'en') {
                 return text.replace(/l/g, 'r').replace(/L/g, 'R');
@@ -204,7 +371,7 @@
             return text;
         }
 
-        // Displaying subtitles
+        // Subtitle rendering sync
         video.addEventListener('timeupdate', () => {
             const time = video.currentTime;
             let currentText = "";

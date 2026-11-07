@@ -1,0 +1,11 @@
+/* Define the flashing animation */
+@keyframes flashBackground {
+  0% { background-color: #ffffff; }
+  50% { background-color: #000000; }
+  100% { background-color: #ffffff; }
+}
+
+/* Apply the animation to the entire page body */
+body {
+  animation: flashBackground 0.5s infinite; /* 0.5s makes it flash rapidly; change to 1s for slower */
+}
