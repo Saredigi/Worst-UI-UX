@@ -1,28 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Video Player</title>
-    <link rel="stylesheet" href="style.css">
+    <title>The Worst Video Player Ever</title>
+    <style>
+        body { 
+            background-color: #ff00ff; 
+            font-family: "Comic Sans MS", "Chalkboard SE", cursive; 
+            text-align: center;
+            margin: 0;
+            padding-top: 50px;
+        }
+        
+        #video-container { 
+            position: relative; 
+            width: 640px; 
+            height: 360px;
+            margin: 0 auto 20px auto; 
+            border: 12px dotted lime; 
+            background-color: black;
+            overflow: hidden;
+        }
+        
+        video { 
+            width: 100%; 
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+        
+        #subtitles { 
+            position: absolute; 
+            bottom: 40px; 
+            width: 100%; 
+            text-align: center; 
+            color: yellow; 
+            font-size: 32px; 
+            font-weight: bold; 
+            text-shadow: 3px 3px red;
+            pointer-events: none; 
+            z-index: 60;
+        }
+
+        /* The Standby Image Overlay covering the video */
+        #image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('image_783f37.jpg') no-repeat center center;
+            background-size: cover;
+            z-index: 50;
+        }
+
+        #security-box {
+            background: rgba(255, 0, 0, 1);
+            padding: 20px;
+            border: 5px dashed yellow;
+            color: white;
+            font-size: 20px;
+            width: 640px;
+            margin: 0 auto 30px auto;
+            box-sizing: border-box;
+        }
+
+        #unlock-input {
+            background: cyan;
+            border: 3px solid magenta;
+            font-size: 20px;
+            width: 100px;
+            text-align: center;
+        }
+
+        #unlock-btn {
+            background: lime;
+            border: 3px solid blue;
+            cursor: pointer;
+        }
+        
+        .controls { 
+            background: cyan; 
+            padding: 15px; 
+            display: flex; 
+            justify-content: space-around; 
+            border-top: 5px solid red;
+            width: 640px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+        
+        .main-btn { 
+            background: orange; 
+            border: 3px solid brown; 
+            padding: 10px 20px; 
+            font-size: 18px;
+            font-family: "Comic Sans MS", cursive;
+            cursor: crosshair; 
+            transition: transform 0.1s;
+        }
+        
+        #play-btn:hover { 
+            transform: translate(15px, -15px) rotate(10deg); 
+        }
+
+        select {
+            background: pink;
+            font-size: 18px;
+            border: 3px solid purple;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="player-container">
-     <iframe
-        width="640"
-        height="360"
-        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-        title="YouTube Video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen>
-        
-    </iframe>
+    <div id="video-container">
+        <!-- Standby screen covering the video until unlocked -->
+        <div id="image-overlay"></div>
 
+        <!-- Make sure 'your-video-file.mp4' is saved in the same folder -->
+        <video id="myVideo" src="your-video-file.mp4" playsinline></video>
+        <div id="subtitles"></div>
+    </div>
+    
+    <div id="security-box">
+        <p><strong>SECURITY CHECK</strong><br>Type "67" three times to unlock the video!</p>
+        <input type="text" id="unlock-input" placeholder="??">
+        <button id="unlock-btn">Submit</button>
+        <p id="unlock-status">Progress: 0 / 3</p>
     </div>
 
-    <script src="script.js"></script>
+    <div class="controls">
+        <button id="play-btn" class="main-btn">Play / Pause</button>
+        <select id="sub-lang">
+            <option value="none">Subtitles: Off</option>
+            <option value="en">English</option>
+        </select>
+    </div>
+
+    <script>
+        const video = document.getElementById('myVideo');
+        const subDisplay = document.getElementById('subtitles');
+        const playBtn = document.getElementById('play-btn');
+        const langSelect = document.getElementById('sub-lang');
+        
+        const imageOverlay = document.getElementById('image-overlay');
+        const securityBox = document.getElementById('security-box');
+        const unlockInput = document.getElementById('unlock-input');
+        const unlockBtn = document.getElementById('unlock-btn');
+        const unlockStatus = document.getElementById('unlock-status');
+        
+        let successCount = 0;
+
+        // Security check logic
+        unlockBtn.addEventListener('click', () => {
+            const userInput = unlockInput.value.trim();
+
+            if (userInput === "676767" && successCount === 0) {
+                successCount = 3;
+            } else if (userInput === "67") {
+                successCount++;
+                unlockInput.value = ""; 
+            } else {
+                alert("WRONG! Starting over.");
+                successCount = 0;
+                unlockInput.value = "";
+            }
+
+            unlockStatus.innerText = "Progress: " + successCount + " / 3";
+
+            if (successCount >= 3) {
+                // Reveal the video and remove the red box
+                imageOverlay.style.display = 'none'; 
+                securityBox.style.display = 'none';
+            }
+        });
+
+        // Subtitles data
+        const subtitlesData = [
+            { start: 0, end: 3, text: "Hello! Welcome to my local video." },
+            { start: 3.5, end: 6, text: "I really like watching downloaded files." },
+            { start: 6.5, end: 10, text: "Please let me know if the subtitles look awful." }
+        ];
+
+        // Play/Pause logic
+        playBtn.addEventListener('click', () => {
+            if (successCount < 3) {
+                alert("You must unlock the video first by typing 67 in the red box!");
+                return;
+            }
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+
+        // The terrible subtitle filter
+        function applySubtitleFilter(text) {
+            if (langSelect.value === 'en') {
+                return text.replace(/l/g, 'r').replace(/L/g, 'R');
+            }
+            return text;
+        }
+
+        // Displaying subtitles
+        video.addEventListener('timeupdate', () => {
+            const time = video.currentTime;
+            let currentText = "";
+            
+            if (langSelect.value !== 'none') {
+                for (let i = 0; i < subtitlesData.length; i++) {
+                    if (time >= subtitlesData[i].start && time <= subtitlesData[i].end) {
+                        currentText = applySubtitleFilter(subtitlesData[i].text);
+                        break;
+                    }
+                }
+            }
+            subDisplay.innerText = currentText;
+        });
+    </script>
 </body>
 </html>
