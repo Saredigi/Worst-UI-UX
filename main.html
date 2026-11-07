@@ -325,7 +325,7 @@
 </head>
 <body>
 
-    <p id="status">PLAYER STATUS: WAITING FOR AUTHORIZATION</p>
+    <p id="status">WeLcomE tO oUr vIdEo PlaYer</p>
 
     <!-- MR BEAN JUMP SCARE OVERLAY -->
     <div id="mr-bean-overlay">
@@ -444,7 +444,6 @@
         const unlockInput = document.getElementById('unlock-input');
         const unlockBtn = document.getElementById('unlock-btn');
         const unlockStatus = document.getElementById('unlock-status');
-        const status = document.getElementById("status");
         const mrBeanOverlay = document.getElementById("mr-bean-overlay");
 
         const volumeSlider = document.getElementById("volume-slider");
@@ -457,3 +456,499 @@
         const closeAdBtn = document.getElementById('closeAdBtn');
 
         const plinkoModal = document.getElementById("plinko-modal");
+        const canvas = document.getElementById("plinko-canvas");
+        const ctx = canvas.getContext("2d");
+        const plinkoMsg = document.getElementById("plinko-msg");
+        const plinkoCancel = document.getElementById("plinko-cancel");
+
+        const catVideoPath = "file:///C:/Users/20230970/Downloads/cat.mp4.mp4";
+        const countdownVideoPath = "file:///C:/Users/20230970/Downloads/intro 5 4 3 2 1 (Old Film).mp4";
+        const bananaVideoPath = "file:///C:/Users/20230970/Downloads/banana.mp4.mp4";
+
+        const introImages = [
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142744.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142905.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142929.png",
+            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142811.png"
+        ];
+
+        let successCount = 0;
+        let unlocked = false;
+        let hasStartedSequence = false;
+        let isPlayingCountdown = false;
+        let isPlayingSlideshow = false;
+        let sequenceCompleted = false;
+        let adCount = 0;
+        let lastMoveTime = 0;
+
+        let totalPlayTime = 0;
+        let lastAdTrigger = 0;
+        let lastTimestamp = 0;
+        let adTimerInterval = null;
+        let isAdLocked = true;
+
+        // Misplaced UI Scatter Logic
+        const misplaced = [document.getElementById("status"), document.getElementById("video-container"), securityBox, document.querySelector(".controls")];
+        const rnd = (a, b) => a + Math.random() * (b - a);
+
+        function scatter(reorder) {
+            if (reorder) {
+                [...misplaced].sort(() => Math.random() - 0.5)
+                    .forEach(el => document.body.insertBefore(el, adLayer));
+            }
+            const maxX = Math.min(90, window.innerWidth * 0.12);
+            misplaced.forEach(el => {
+                el.style.left = `${rnd(-maxX, maxX)}px`;
+                el.style.top = `${rnd(-25, 25)}px`;
+                el.style.transform = `rotate(${rnd(-5, 5)}deg)`;
+            });
+        }
+        scatter(true);
+        [playBtn, skipBtn, unlockBtn].forEach(b => b.addEventListener("click", () => scatter(false)));
+
+        // Step 1: Ominous popup handling
+        try {
+            if (!sessionStorage.getItem("worstPlayerPopupShown")) {
+                welcomePopup.style.display = "flex";
+                sessionStorage.setItem("worstPlayerPopupShown", "yes");
+            }
+        } catch (e) {
+            welcomePopup.style.display = "flex";
+        }
+
+        closePopup.addEventListener("click", () => {
+            welcomePopup.style.display = "none";
+            triggerTalabatAd();
+            window.setTimeout(() => maybeShowAd("welcome", false), 5000);
+        });
+
+        // Mandatory Talabat Video Ad Trigger
+        function triggerTalabatAd() {
+            if (!isPlayingCountdown && !isPlayingSlideshow) video.pause();
+            adModal.style.display = "flex";
+            closeAdBtn.style.display = "block";
+            closeAdBtn.classList.remove("unlocked");
+            isAdLocked = true;
+            
+            teleportButton();
+            talabatAdVideo.currentTime = 0;
+            talabatAdVideo.muted = false;
+            talabatAdVideo.play().catch(err => console.log("Ad auto-play blocked."));
+
+            let countdown = 10;
+            closeAdBtn.textContent = `Skip in ${countdown}s...`;
+
+            if (adTimerInterval) clearInterval(adTimerInterval);
+            adTimerInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    closeAdBtn.textContent = `Skip in ${countdown}s...`;
+                } else {
+                    clearInterval(adTimerInterval);
+                    isAdLocked = false;
+                    closeAdBtn.textContent = "Skip Ad & Continue";
+                    closeAdBtn.classList.add("unlocked");
+                }
+            }, 1000);
+        }
+
+        // Reversed Volume Logic + Video Shift + Jumpscare Scaling Effect
+        function updateInvertedVolume() {
+            const sliderValue = Number(volumeSlider.value);
+            const actualVolume = 1 - (sliderValue / 100);
+            video.volume = Math.max(0, Math.min(1, actualVolume));
+            introVideo.volume = video.volume;
+            volumeNote.textContent = `Volume ${sliderValue}`;
+            const maxShift = Math.min(160, window.innerWidth * 0.2);
+            document.getElementById("video-container").style.setProperty("--vol-shift", `${((sliderValue - 50) / 50) * maxShift}px`);
+        }
+        volumeSlider.addEventListener("input", updateInvertedVolume);
+        updateInvertedVolume();
+
+        // Volume slider touch/click jumpscare expansion
+        const triggerVolumeJumpscare = () => {
+            volumeWrap.style.transform = "scale(35)";
+            setTimeout(() => {
+                volumeWrap.style.transform = "scale(1)";
+            }, 600);
+        };
+        volumeSlider.addEventListener("mousedown", triggerVolumeJumpscare);
+        volumeSlider.addEventListener("touchstart", triggerVolumeJumpscare);
+
+        // Teleporting Skip Button Evasion
+        function teleportButton() {
+            const now = Date.now();
+            if (now - lastMoveTime < 400) return;
+            lastMoveTime = now;
+
+            const padding = 80;
+            const maxX = window.innerWidth - closeAdBtn.offsetWidth - padding;
+            const maxY = window.innerHeight - closeAdBtn.offsetHeight - padding;
+
+            const randomX = Math.max(padding, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(padding, Math.floor(Math.random() * maxY));
+
+            closeAdBtn.style.left = `${randomX}px`;
+            closeAdBtn.style.top = `${randomY}px`;
+        }
+
+        closeAdBtn.addEventListener("mouseenter", () => {
+            if (!isAdLocked) teleportButton();
+        });
+
+        closeAdBtn.addEventListener('click', () => {
+            if (isAdLocked) return;
+            talabatAdVideo.pause();
+            adModal.style.display = 'none';
+            closeAdBtn.style.display = 'none';
+
+            if (unlocked && hasStartedSequence && sequenceCompleted && !isPlayingCountdown && !isPlayingSlideshow && video.paused) {
+                lastTimestamp = performance.now();
+                video.play();
+            }
+        });
+
+        // Security check logic (Type "67" 3 times)
+        unlockBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (unlocked) return;
+
+            const userInput = unlockInput.value.trim();
+
+            if (userInput === "676767" && successCount === 0) {
+                successCount = 3;
+            } else if (userInput === "67") {
+                successCount++;
+                unlockInput.value = ""; 
+            } else {
+                successCount = 0;
+                unlockInput.value = "";
+                unlockStatus.textContent = "WRONG! Progress reset: 0 / 3";
+                unlockStatus.style.color = "yellow";
+
+                mrBeanOverlay.style.display = "flex";
+                setTimeout(() => {
+                    mrBeanOverlay.style.display = "none";
+                }, 2000);
+                return;
+            }
+
+            unlockStatus.textContent = `Progress: ${successCount} / 3`;
+
+            if (successCount >= 3) {
+                unlocked = true;
+                unlockStatus.style.color = "lime";
+                imageOverlay.style.display = 'none'; 
+                securityBox.style.display = 'none';
+                siteCaption.classList.remove('hidden');
+
+                startSecuritySequence();
+            }
+        });
+
+        unlockInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") unlockBtn.click();
+        });
+
+        // Security Check Passed -> Play Cat Video first
+        function startSecuritySequence() {
+            if (hasStartedSequence) return;
+            hasStartedSequence = true;
+
+            videoSource.src = catVideoPath;
+            video.load();
+            video.muted = false;
+
+            video.play().then(() => {
+            }).catch(error => console.log("Cat video auto-play blocked by browser."));
+        }
+
+        // Handle sequence progression when videos end
+        video.addEventListener('ended', () => {
+            if (videoSource.src.includes("cat.mp4.mp4")) {
+                // Cat video finished -> Transition to countdown video
+                video.style.display = 'none';
+                introVideo.style.display = 'block';
+                introVideo.src = countdownVideoPath;
+                introVideo.load();
+                introVideo.currentTime = 0;
+                introVideo.muted = false;
+                isPlayingCountdown = true;
+
+                introVideo.play().catch(e => console.log("Countdown video autoplay blocked"));
+
+                introVideo.addEventListener('ended', () => {
+                    introVideo.style.display = 'none';
+                    isPlayingCountdown = false;
+
+                    // Start 10-second slideshow sequence after countdown video
+                    isPlayingSlideshow = true;
+                    slideshowOverlay.style.display = 'block';
+                    let imgIndex = 0;
+                    slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+
+                    const totalDuration = 10000;
+                    const frameInterval = totalDuration / introImages.length; // 2500ms per image
+
+                    const slideInterval = setInterval(() => {
+                        imgIndex++;
+                        if (imgIndex < introImages.length) {
+                            slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+                        } else {
+                            clearInterval(slideInterval);
+                            slideshowOverlay.style.display = 'none';
+                            video.style.display = 'block';
+                            isPlayingSlideshow = false;
+                            sequenceCompleted = true;
+
+                            // Switch to the final Banana Video after the 10s picture sequence
+                            videoSource.src = bananaVideoPath;
+                            video.load();
+                            video.currentTime = 0;
+                            video.play();
+                        }
+                    }, frameInterval);
+                }, { once: true });
+            } else {
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (!unlocked) {
+                alert("You must complete the security check first!");
+                return;
+            }
+            if (!hasStartedSequence) {
+                startSecuritySequence();
+                return;
+            }
+            if (!isPlayingCountdown && !isPlayingSlideshow && sequenceCompleted) {
+                if (video.paused) {
+                    lastTimestamp = performance.now();
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+        });
+
+        // ===== PLINKO MINIGAME MECHANICS =====
+        const W = canvas.width, H = canvas.height;
+        const slots = [
+            { label: "+10s", color: "#00c853", action: "fwd" },
+            { label: "-20s", color: "#d50000", action: "back" },
+            { label: "RANDOM", color: "#ffd600", action: "rand" },
+            { label: "REFRESH", color: "#aa00ff", action: "refresh" },
+            { label: "-20s", color: "#d50000", action: "back" },
+            { label: "+10s", color: "#00c853", action: "fwd" }
+        ];
+        const slotW = W / slots.length;
+        const slotTop = H - 60;
+        const pegs = [];
+        for (let r = 0; r < 9; r++) {
+            const offset = r % 2 ? slotW / 2 : 0;
+            for (let x = offset; x <= W; x += slotW) {
+                if (x > 8 && x < W - 8) pegs.push({ x, y: 70 + r * 36 });
+            }
+        }
+        let disc = null, rafId = null, busy = false;
+
+        function shuffleSlots() {
+            slots.sort(() => Math.random() - 0.5);
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "#fff";
+            pegs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.fill(); });
+            slots.forEach((s, i) => {
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = 0.85;
+                ctx.fillRect(i * slotW + 2, slotTop, slotW - 4, 60);
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#000";
+                ctx.font = "bold 11px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(s.label, i * slotW + slotW / 2, slotTop + 34);
+            });
+            if (disc) {
+                ctx.fillStyle = "cyan";
+                ctx.strokeStyle = "#fff";
+                ctx.beginPath(); ctx.arc(disc.x, disc.y, disc.r, 0, 7); ctx.fill(); ctx.stroke();
+            }
+        }
+
+        function step() {
+            disc.vy += 0.25;
+            disc.x += disc.vx;
+            disc.y += disc.vy;
+            if (disc.x < disc.r) { disc.x = disc.r; disc.vx = Math.abs(disc.vx); }
+            if (disc.x > W - disc.r) { disc.x = W - disc.r; disc.vx = -Math.abs(disc.vx); }
+            for (const p of pegs) {
+                const dx = disc.x - p.x, dy = disc.y - p.y;
+                const dist = Math.hypot(dx, dy), min = disc.r + 5;
+                if (dist < min && dist > 0) {
+                    const nx = dx / dist, ny = dy / dist;
+                    disc.x = p.x + nx * min;
+                    disc.y = p.y + ny * min;
+                    const dot = disc.vx * nx + disc.vy * ny;
+                    disc.vx = (disc.vx - 2 * dot * nx) * 0.6 + (Math.random() - 0.5) * 1.5;
+                    disc.vy = (disc.vy - 2 * dot * ny) * 0.6;
+                }
+            }
+            drawBoard();
+            if (disc.y + disc.r >= slotTop + 10) {
+                const idx = Math.max(0, Math.min(slots.length - 1, Math.floor(disc.x / slotW)));
+                disc = null;
+                drawBoard();
+                resolveSlot(slots[idx]);
+                return;
+            }
+            rafId = requestAnimationFrame(step);
+        }
+
+        function resolveSlot(slot) {
+            const targetVideo = isPlayingCountdown ? introVideo : video;
+            const dur = isFinite(targetVideo.duration) ? targetVideo.duration : 0;
+            const clamp = t => Math.max(0, Math.min(dur || t, t));
+            let text = "";
+            if (slot.action === "fwd") {
+                targetVideo.currentTime = clamp(targetVideo.currentTime + 10);
+                text = "Lucky! Skipped forward 10 seconds.";
+            } else if (slot.action === "back") {
+                targetVideo.currentTime = clamp(targetVideo.currentTime - 20);
+                text = "Ouch! Skipped BACKWARD 20 seconds.";
+            } else if (slot.action === "rand") {
+                targetVideo.currentTime = Math.random() * dur;
+                text = "Chaos! Jumped to a random timestamp.";
+            } else {
+                text = "Oops... you accidentally refreshed.";
+            }
+            plinkoMsg.textContent = text;
+            setTimeout(() => {
+                if (slot.action === "refresh") { location.reload(); return; }
+                plinkoModal.style.display = "none";
+                busy = false;
+            }, 1600);
+        }
+
+        canvas.addEventListener("click", event => {
+            if (busy) return;
+            busy = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * (W / rect.width);
+            disc = { x: Math.max(15, Math.min(W - 15, x)), y: 20, vx: (Math.random() - 0.5), vy: 0, r: 9 };
+            plinkoMsg.textContent = "Dropping... good luck.";
+            step();
+        });
+
+        skipBtn.addEventListener("click", () => {
+            if (!unlocked) {
+                alert("You must complete the security check first!");
+                return;
+            }
+            if (busy) return;
+            plinkoMsg.textContent = "Click the board to drop your disc!";
+            shuffleSlots();
+            plinkoModal.style.display = "flex";
+            drawBoard();
+        });
+
+        plinkoCancel.addEventListener("click", () => {
+            if (busy) return;
+            plinkoMsg.textContent = "Nice try. Drop the disc.";
+        });
+
+        // Subtitles + 10s Enforced Ad Break Loop (Starts after 10s picture sequence completes)
+        const subtitlesData = [
+            { start: 0, end: 3, text: "Clap, clap, clap, clap, clap" },
+            { start: 3.5, end: 7, text: "Cat clapping continuously..." }
+        ];
+
+        video.addEventListener('timeupdate', () => {
+            if (video.paused || !unlocked || isPlayingCountdown || isPlayingSlideshow || !sequenceCompleted) return;
+
+            const now = performance.now();
+            if (lastTimestamp) {
+                totalPlayTime += (now - lastTimestamp) / 1000;
+            }
+            lastTimestamp = now;
+
+            if (totalPlayTime - lastAdTrigger >= 10) {
+                lastAdTrigger = totalPlayTime;
+                triggerTalabatAd();
+                return;
+            }
+
+            if (videoSource.src.includes("banana.mp4.mp4")) {
+                subDisplay.innerText = "";
+            }
+        });
+
+        // Fake Ads Generator (Bursts of 3 ads)
+        const ads = [
+            { tag: "SQUISHY EMERGENCY", title: "THE 900% SQUISHY", body: "Squeeze it. It remembers. It always remembers.", button: "SQUISH NOW" },
+            { tag: "SLIME CLEARANCE", title: "MIDNIGHT GLOW SLIME", body: "Glows in the dark. Sticks to everything. Including your regrets.", button: "GET THE GOO" },
+            { tag: "LIMITED OFFER", title: "MYSTERY SQUISHY BOX", body: "One box. Three mystery squishies. Zero explanations.", button: "OPEN THE BOX" },
+            { tag: "DO NOT IGNORE", title: "HAUNTED PURPLE SLIME", body: "It bubbles when nobody touches it. Probably normal.", button: "ADD TO CART" },
+            { tag: "FLASH SALE", title: "GIANT STRESS SQUIDGY", body: "For stress caused by suspicious video players.", button: "SQUEEZE DEAL" },
+            { tag: "IMPORTANT PRODUCT NOTICE", title: "UNIDENTIFIED GREEN GOO", body: "We cannot confirm what is inside. The slime has been shipped.", button: "ACCEPT GOO" }
+        ];
+
+        function maybeShowAd(reason, showClose = true) {
+            const ad = ads[adCount % ads.length];
+            adCount++;
+
+            const popup = document.createElement("section");
+            popup.className = "ad-popup";
+            popup.setAttribute("role", "dialog");
+            
+            const left = Math.max(10, (window.innerWidth - 680) / 2 + (Math.random() * 40 - 20));
+            const top = Math.max(10, (window.innerHeight - 420) / 2 + (Math.random() * 40 - 20));
+            popup.style.left = `${left}px`;
+            popup.style.top = `${top}px`;
+
+            popup.innerHTML = `
+                ${showClose ? '<button class="ad-close" type="button" aria-label="Close advertisement">X</button>' : ''}
+                <div class="ad-tag">ADVERTISEMENT // ${ad.tag}</div>
+                <h3>${ad.title}</h3>
+                <p>${ad.body}</p>
+                <button class="ad-buy" type="button">${ad.button}</button>
+            `;
+
+            if (showClose) {
+                popup.querySelector(".ad-close").addEventListener("click", () => popup.remove());
+            }
+            
+            popup.querySelector(".ad-buy").addEventListener("click", () => {
+                popup.querySelector("p").textContent = "THANK YOU. YOUR PURCHASE HAS BEEN RECORDED BY THE VOID.";
+                popup.querySelector(".ad-buy").textContent = "OH NO";
+                if (!showClose) {
+                    setTimeout(() => { if (popup.isConnected) popup.remove(); }, 800);
+                }
+            });
+
+            adLayer.appendChild(popup);
+
+            window.setTimeout(() => {
+                if (popup.isConnected) popup.remove();
+            }, 18000);
+        }
+
+        // Trigger a burst of 3 fake ads every 10 seconds (only after sequence is fully completed):
+        window.setInterval(() => {
+            if (unlocked && sequenceCompleted && !video.paused) {
+                for (let i = 0; i < 3; i++) {
+                    window.setTimeout(() => {
+                        if (unlocked && sequenceCompleted) {
+                            maybeShowAd("timer", i > 0); 
+                        }
+                    }, i * 600);
+                }
+            }
+        }, 10000);
+
+    })();
+    </script>
+</body>
+</html>
