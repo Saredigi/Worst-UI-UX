@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>The Worst Video Player Ever</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        @keyframes flashBackground {
+            0% { background-color: #ff00ff; }
+            50% { background-color: #00ffff; }
+            100% { background-color: #ff00ff; }
+        }
+
+        body {
+            background: #ff00ff;
+            color: #111;
+            font-family: "Comic Sans MS", "Chalkboard SE", cursive;
+            text-align: center;
+            margin: 0;
+            padding: 20px 12px 60px;
+            animation: flashBackground 0.8s infinite;
+            overflow-x: hidden;
+        }
+
+        #status { 
+            font-family: "Courier New", monospace; 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin: 12px; 
+            color: #000; 
+            background: yellow; 
+            display: inline-block; 
+            padding: 4px 10px; 
+            border: 2px solid black; 
+        }
+
+        /* WEBSITE LEVEL BANNER CAPTION */
+        #site-caption {
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            font-size: 45px;
+            color: #ffeb3b;
+            text-transform: uppercase;
+            text-shadow: 4px 4px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000;
+            margin-bottom: 15px;
+            animation: siteBounce 0.6s infinite alternate;
+        }
+
+        @keyframes siteBounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+
+        #video-container { 
+            position: relative; 
+            width: min(640px, 94vw); 
+            height: 360px;
+            margin: 0 auto 20px auto; 
+            border: 12px dotted lime; 
+            background-color: black;
+            overflow: hidden;
+            transform: translate(var(--vol-shift, 0px), 0);
+            z-index: 5;
+        }
+        
+        video { 
+            width: 100%; 
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        #introPlayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 52;
+            display: none;
+            pointer-events: none;
+        }
+        
+        #slideshow-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-color: black;
+            z-index: 55;
+            display: none;
+        }
+        
+        #subtitles { 
+            position: absolute; 
+            bottom: 40px; 
+            left: 0;
+            width: 100%; 
+            text-align: center; 
+            color: yellow; 
+            font-size: 32px; 
+            font-weight: bold; 
+            text-shadow: 3px 3px red;
+            pointer-events: none; 
+            z-index: 60;
+        }
+
+        #image-overlay {
+            position: absolute;
+            inset: 0;
+            background: #000 url('Screenshot 2026-11-07 122843.png') no-repeat center center;
+            background-size: cover;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* MR BEAN JUMP SCARE OVERLAY */
+        #mr-bean-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #mr-bean-overlay img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
+
+        /* Misplaced layout elements */
+        #status, #security-box { 
+            position: relative; 
+            transition: left .4s, top .4s, transform .4s; 
+            z-index: 10;
+        }
+
+        .controls {
+            position: relative;
+            z-index: 10; 
+            background: cyan; 
+            padding: 15px; 
+            display: flex; 
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-around; 
+            gap: 10px;
+            border: 5px solid red;
+            width: min(640px, 94vw);
+            margin: 0 auto;
+            transition: left .4s, top .4s, transform .4s;
+        }
+
+        #security-box {
+            background: rgba(255, 0, 0, 1);
+            padding: 20px;
+            border: 5px dashed yellow;
+            color: white;
+            font-size: 20px;
+            width: min(640px, 94vw);
+            margin: 0 auto 30px auto;
+        }
+
+        #unlock-input {
+            background: cyan;
+            border: 3px solid magenta;
+            font-size: 20px;
+            width: 100px;
+            text-align: center;
+        }
+
+        #unlock-btn {
+            z-index: 101;
+            background: lime;
+            border: 3px solid blue;
+            cursor: pointer;
+            padding: 7px 14px;
+            font-weight: bold;
+        }
+        
+        .main-btn { 
+            background: orange; 
+            border: 3px solid brown; 
+            padding: 10px 18px; 
+            font-size: 17px;
+            font-family: "Comic Sans MS", cursive;
+            cursor: crosshair; 
+            transition: transform 0.1s;
+        }
+        
+        #play-btn {
+            position: relative;
+            z-index: 4000; /* On top of everything except pop-up ads */
+        }
+
+        #skip-btn { background: #9cff00; border-color: green; }
+
+        select {
+            background: pink;
+            font-size: 18px;
+            border: 3px solid purple;
+            padding: 5px;
+            z-index: 10;
+        }
+
+        .volume-wrap { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 3px; 
+            font-weight: bold; 
+            font-size: 14px; 
+            position: relative;
+            transition: transform 0.15s ease-out;
+            transform-origin: center center;
+            z-index: 10;
+        }
+        #volume-slider { accent-color: red; width: 145px; cursor: ew-resize; }
+        #volume-note { font-size: 11px; color: #6a006a; }
+
+        /* Plinko Modal */
+        #plinko-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,.85);
+            display: none; justify-content: center; align-items: center;
+            z-index: 90000; padding: 10px;
+        }
+        .plinko-box {
+            background: #1a0033; border: 6px ridge #ff39c8; padding: 12px;
+            color: #fff; width: 380px; max-width: 98vw; text-align: center;
+        }
+        .plinko-box h2 { margin: 0 0 6px; color: yellow; font-size: 20px; text-shadow: 2px 2px red; }
+        #plinko-canvas { background: #0b0020; border: 3px solid cyan; max-width: 100%; display: block; margin: 0 auto; cursor: pointer; }
+        #plinko-msg { min-height: 24px; font-weight: bold; color: lime; margin: 8px 0 0; }
+
+        /* OMINOUS POPUP */
+        #welcome-popup {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.97);
+            display: none; justify-content: center; align-items: center;
+            z-index: 99999; padding: 15px;
+        }
+
+        .popup-box {
+            background: #080808; color: #b5b5b5; width: 420px; max-width: 95%;
+            padding: 35px; border: 1px solid #5b0000;
+            box-shadow: 0 0 30px rgba(150, 0, 0, 0.3);
+            font-family: "Courier New", monospace; text-align: center;
+            animation: popupAppear 1.5s ease;
+        }
+
+        .warning-icon { color: darkred; font-size: 55px; animation: warningPulse 2s infinite; }
+        .system-label { color: #720000; font-size: 11px; letter-spacing: 3px; }
+        .popup-box h2 { color: #a00000; font-size: 24px; letter-spacing: 2px; line-height: 1.5; }
+        .popup-divider { height: 1px; background: #4b0000; margin: 25px 0; }
+        .small-warning { color: darkred; font-weight: bold; letter-spacing: 3px; margin-top: 30px; }
+        .popup-box button {
+            background: transparent; color: #a00000; border: 1px solid #720000;
+            padding: 13px 30px; margin-top: 20px; font-family: "Courier New", monospace;
+            letter-spacing: 3px; cursor: pointer; transition: 0.3s;
+        }
+        .popup-box button:hover { background: #720000; color: white; box-shadow: 0 0 20px red; }
+        .footer-text { font-size: 10px; color: #555; margin-top: 30px; letter-spacing: 2px; }
+
+        @keyframes warningPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        @keyframes popupAppear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* POP-UP VIDEO AD MODAL STYLES */
+        .ad-modal {
+            display: none; position: fixed; inset: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 999999; justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+
+        .ad-video-wrapper {
+            position: relative; width: min(640px, 94vw);
+            background: #ff5a00; border: 5px solid white;
+            border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 30px #ff5a00;
+        }
+
+        .ad-header { background: #ff5a00; color: white; font-weight: bold; padding: 10px; font-size: 20px; }
+        .ad-video-wrapper video { width: 100%; height: 360px; pointer-events: none; }
+
+        /* UNSKIPPABLE COUNTDOWN SKIP BUTTON */
+        #closeAdBtn {
+            position: fixed; z-index: 1000000;
+            background: gray; color: white; border: 4px solid darkgray;
+            font-weight: bold; font-size: 18px; padding: 14px 28px;
+            cursor: not-allowed; display: none; box-shadow: 0 0 15px black;
+            transition: top 0.5s ease-out, left 0.5s ease-out;
+        }
+
+        #closeAdBtn.unlocked {
+            background: yellow; color: black; border-color: red;
+            cursor: pointer; box-shadow: 0 0 15px yellow;
+        }
+
+        /* Fake in-page product ads */
+        #ad-layer { position: fixed; inset: 0; pointer-events: none; z-index: 5000; }
+        .ad-popup {
+            pointer-events: auto; position: absolute; 
+            width: min(85vw, 680px); min-height: min(60vh, 420px);
+            background: #fff8a8; color: #241324; border: 8px ridge #ff39c8;
+            box-shadow: 12px 12px 0 rgba(0,0,0,.6); padding: 25px;
+            text-align: center; font-family: "Comic Sans MS", cursive;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            animation: adJiggle .25s ease-in-out 2;
+            z-index: 5000;
+        }
+        .ad-popup h3 { margin: 10px 0; color: #e00091; font-size: clamp(24px, 5vw, 36px); }
+        .ad-popup p { margin: 15px 0 20px; font-size: clamp(16px, 3vw, 22px); line-height: 1.4; }
+        .ad-popup .ad-tag { font: bold 12px "Courier New", monospace; color: #666; letter-spacing: 2px; }
+        .ad-popup .ad-close {
+            position: absolute; top: 3px; right: 3px; border: 1px solid #000;
+            background: red; color: white; font-weight: bold; cursor: pointer;
+            width: 14px; height: 14px; line-height: 10px; font-size: 9px; padding: 0;
+        }
+        .ad-popup .ad-buy {
+            border: 4px outset #00d900; background: #9cff00; padding: 14px 28px;
+            font-size: 20px; font-weight: bold; cursor: pointer; font-family: inherit;
+        }
+
+        @keyframes adJiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <p id="status">WeLcomE tO oUr vIdEo PlaYer</p>
+
+    <!-- QUACK AUDIO ELEMENT -->
+    <audio id="quackAudio" src="Quack Sound Effect.mp3" preload="auto"></audio>
+
+    <!-- MR BEAN JUMP SCARE OVERLAY -->
+    <div id="mr-bean-overlay">
+        <img src="mr-bean.gif" alt="Wrong Security Code">
+    </div>
+
+    <!-- 1. OMINOUS WELCOME POPUP -->
+    <div id="welcome-popup">
+        <div class="popup-box">
+            <div class="warning-icon">⚠</div>
+            <p class="system-label">UNKNOWN SYSTEM // SESSION DETECTED</p>
+            <h2>YOU WERE NOT SUPPOSED TO BE HERE.</h2>
+            <div class="popup-divider"></div>
+            <p>An unauthorized session has been detected.</p>
+            <p>
+                Do not attempt to close this window.<br>
+                Do not refresh the page.<br>
+                Do not trust what you see.
+            </p>
+            <p class="small-warning">WE KNOW YOU ARE HERE.</p>
+            <button id="close-popup" type="button">I UNDERSTAND</button>
+            <p class="footer-text">SESSION MONITORING ACTIVE...</p>
+        </div>
+    </div>
+
+    <!-- 2. PLINKO SKIP MODAL -->
+    <div id="plinko-modal">
+        <div class="plinko-box">
+            <h2>SKIP FORWARD 10 SECONDS?</h2>
+            <canvas id="plinko-canvas" width="360" height="420"></canvas>
+            <p id="plinko-msg">Click the board to drop your disc!</p>
+        </div>
+    </div>
+
+    <!-- 3. WEBSITE LEVEL BANNER CAPTION -->
+    <div id="site-caption" class="hidden">
+        YOU DEED EET! 👏
+    </div>
+
+    <!-- MAIN PLAYER CONTAINER -->
+    <div id="video-container" id="videoContainerBox">
+        <!-- Security Check Image Overlay (stays until check is completed) -->
+        <div id="image-overlay"></div>
+        
+        <!-- 5-4-3-2-1 countdown video overlay -->
+        <video id="introPlayer" src="intro 5 4 3 2 1 (Old Film).mp4" playsinline></video>
+        
+        <!-- Interruption slideshow overlay -->
+        <div id="slideshow-overlay"></div>
+
+        <video id="videoPlayer" playsinline style="background: black;">
+            <source id="videoSource" src="cat.mp4.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div id="subtitles"></div>
+    </div>
+    
+    <!-- SECURITY CHECK BOX -->
+    <div id="security-box">
+        <p><strong>SECURITY CHECK</strong><br>Type "67" and click Submit 3 times to unlock!</p>
+        <input type="text" id="unlock-input" placeholder="??" autocomplete="off" inputmode="numeric">
+        <button id="unlock-btn" type="button">Submit</button>
+        <p id="unlock-status">Progress: 0 / 3</p>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls" id="controlsBox">
+        <button id="play-btn" class="main-btn" type="button">PLAY / PAUSE</button>
+        <button id="skip-btn" class="main-btn" type="button">+10s</button>
+        <select id="sub-lang">
+            <option value="en" selected>English</option>
+            <option value="none">Subtitles: Off</option>
+        </select>
+        <label class="volume-wrap" id="volume-wrap">
+            <span>VOLUME</span>
+            <input id="volume-slider" type="range" min="0" max="100" value="50">
+            <span id="volume-note">Volume 50</span>
+        </label>
+    </div>
+
+    <!-- FORCED TALABAT VIDEO AD MODAL -->
+    <div id="adModal" class="ad-modal">
+        <div class="ad-video-wrapper">
+            <div class="ad-header">🧡 TALABAT SPONSORED AD 🍔</div>
+            <video id="talabatAdVideo" playsinline autoplay muted>
+                <source src="talabat_ad.mp4.mp4" type="video/mp4">
+                Your browser does not support video ads.
+            </video>
+        </div>
+    </div>
+
+    <!-- UNSKIPPABLE COUNTDOWN BUTTON -->
+    <button id="closeAdBtn" type="button">Skip in 10s...</button>
+
+    <!-- FAKE PRODUCT AD LAYER -->
+    <div id="ad-layer" aria-live="polite"></div>
+
+    <script>
+    (() => {
+        const welcomePopup = document.getElementById("welcome-popup");
+        const closePopup = document.getElementById("close-popup");
+        const siteCaption = document.getElementById("site-caption");
+
+        const video = document.getElementById('videoPlayer');
+        const introVideo = document.getElementById('introPlayer');
+        const slideshowOverlay = document.getElementById('slideshow-overlay');
+        const videoSource = document.getElementById('videoSource');
+        const subDisplay = document.getElementById('subtitles');
+        const playBtn = document.getElementById('play-btn');
+        const skipBtn = document.getElementById('skip-btn');
+        const langSelect = document.getElementById('sub-lang');
+        const controlsBox = document.getElementById('controlsBox');
+        
+        const imageOverlay = document.getElementById('image-overlay');
+        const securityBox = document.getElementById('security-box');
+        const unlockInput = document.getElementById('unlock-input');
+        const unlockBtn = document.getElementById('unlock-btn');
+        const unlockStatus = document.getElementById('unlock-status');
+        const mrBeanOverlay = document.getElementById("mr-bean-overlay");
+
+        const volumeSlider = document.getElementById("volume-slider");
+        const volumeWrap = document.getElementById("volume-wrap");
+        const volumeNote = document.getElementById("volume-note");
+        const adLayer = document.getElementById("ad-layer");
+
+        const adModal = document.getElementById('adModal');
+        const talabatAdVideo = document.getElementById('talabatAdVideo');
+        const closeAdBtn = document.getElementById('closeAdBtn');
+        const quackAudio = document.getElementById('quackAudio');
+
+        const plinkoModal = document.getElementById("plinko-modal");
+        const canvas = document.getElementById("plinko-canvas");
+        const ctx = canvas.getContext("2d");
+        const plinkoMsg = document.getElementById("plinko-msg");
+
+        const catVideoPath = "cat.mp4.mp4";
+        const countdownVideoPath = "intro 5 4 3 2 1 (Old Film).mp4";
+        const bananaVideoPath = "banana.mp4.mp4";
+
+        const introImages = [
+            "Screenshot 2026-11-07 142744.png",
+            "Screenshot 2026-11-07 142905.png",
+            "Screenshot 2026-11-07 142929.png",
+            "Screenshot 2026-11-07 142811.png"
+        ];
+
+        let successCount = 0;
+        let unlocked = false;
+        let hasStartedSequence = false;
+        let isPlayingCountdown = false;
+        let isPlayingSlideshow = false;
+        let sequenceCompleted = false;
+        let adCount = 0;
+        let lastMoveTime = 0;
+        let playButtonTired = false;
+
+        let adTimerInterval = null;
+        let isAdLocked = true;
+
+        // Quack function helper
+        function playQuack() {
+            if (quackAudio) {
+                quackAudio.currentTime = 0;
+                quackAudio.play().catch(e => console.log("Quack audio playback blocked by browser policy until interaction."));
+            }
+        }
+
+        // Attach quack audio to video play and pause events
+        video.addEventListener('play', () => {
+            playBtn.textContent = "PAUSE";
+            playQuack();
+        });
+
+        video.addEventListener('pause', () => {
+            playBtn.textContent = "PLAY";
+            playQuack();
+        });
+
+        // Misplaced UI Scatter Logic
+        const misplaced = [document.getElementById("status"), document.getElementById("video-container"), securityBox, controlsBox];
+        const rnd = (a, b) => a + Math.random() * (b - a);
+
+        function scatter(reorder) {
+            if (reorder) {
+                [...misplaced].sort(() => Math.random() - 0.5)
+                    .forEach(el => document.body.insertBefore(el, adLayer));
+            }
+            const maxX = Math.min(90, window.innerWidth * 0.12);
+            misplaced.forEach(el => {
+                el.style.left = `${rnd(-maxX, maxX)}px`;
+                el.style.top = `${rnd(-25, 25)}px`;
+                el.style.transform = `rotate(${rnd(-5, 5)}deg)`;
+            });
+        }
+        scatter(true);
+        [skipBtn, unlockBtn].forEach(b => b.addEventListener("click", () => scatter(false)));
+
+        // Step 1: Ominous popup handling
+        try {
+            if (!sessionStorage.getItem("worstPlayerPopupShown")) {
+                welcomePopup.style.display = "flex";
+                sessionStorage.setItem("worstPlayerPopupShown", "yes");
+            }
+        } catch (e) {
+            welcomePopup.style.display = "flex";
+        }
+
+        closePopup.addEventListener("click", () => {
+            welcomePopup.style.display = "none";
+            triggerTalabatAd(); 
+        });
+
+        // Mandatory Talabat Video Ad Trigger (Shown ONLY at start)
+        function triggerTalabatAd() {
+            if (!isPlayingCountdown && !isPlayingSlideshow && sequenceCompleted) video.pause();
+            adModal.style.display = "flex";
+            closeAdBtn.style.display = "block";
+            closeAdBtn.classList.remove("unlocked");
+            isAdLocked = true;
+            
+            teleportButton();
+            talabatAdVideo.currentTime = 0;
+            talabatAdVideo.muted = false;
+            talabatAdVideo.play().catch(err => console.log("Ad auto-play blocked."));
+
+            let countdown = 10;
+            closeAdBtn.textContent = `Skip in ${countdown}s...`;
+
+            if (adTimerInterval) clearInterval(adTimerInterval);
+            adTimerInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    closeAdBtn.textContent = `Skip in ${countdown}s...`;
+                } else {
+                    clearInterval(adTimerInterval);
+                    isAdLocked = false;
+                    closeAdBtn.textContent = "Skip Ad & Continue";
+                    closeAdBtn.classList.add("unlocked");
+                }
+            }, 1000);
+        }
+
+        // Reversed Volume Logic + Video Shift + Jumpscare Scaling Effect
+        function updateInvertedVolume() {
+            const sliderValue = Number(volumeSlider.value);
+            const actualVolume = 1 - (sliderValue / 100);
+            video.volume = Math.max(0, Math.min(1, actualVolume));
+            introVideo.volume = video.volume;
+            volumeNote.textContent = `Volume ${sliderValue}`;
+            const maxShift = Math.min(160, window.innerWidth * 0.2);
+            document.getElementById("video-container").style.setProperty("--vol-shift", `${((sliderValue - 50) / 50) * maxShift}px`);
+        }
+        volumeSlider.addEventListener("input", updateInvertedVolume);
+        updateInvertedVolume();
+
+        const triggerVolumeJumpscare = () => {
+            volumeWrap.style.transform = "scale(35)";
+            setTimeout(() => {
+                volumeWrap.style.transform = "scale(1)";
+            }, 600);
+        };
+        volumeSlider.addEventListener("mousedown", triggerVolumeJumpscare);
+        volumeSlider.addEventListener("touchstart", triggerVolumeJumpscare);
+
+        // Teleporting Skip Button Evasion
+        function teleportButton() {
+            const now = Date.now();
+            if (now - lastMoveTime < 400) return;
+            lastMoveTime = now;
+
+            const padding = 80;
+            const maxX = window.innerWidth - closeAdBtn.offsetWidth - padding;
+            const maxY = window.innerHeight - closeAdBtn.offsetHeight - padding;
+
+            const randomX = Math.max(padding, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(padding, Math.floor(Math.random() * maxY));
+
+            closeAdBtn.style.left = `${randomX}px`;
+            closeAdBtn.style.top = `${randomY}px`;
+        }
+
+        closeAdBtn.addEventListener("mouseenter", () => {
+            if (!isAdLocked) teleportButton();
+        });
+
+        closeAdBtn.addEventListener('click', () => {
+            if (isAdLocked) return;
+            talabatAdVideo.pause();
+            adModal.style.display = 'none';
+            closeAdBtn.style.display = 'none';
+
+            if (sequenceCompleted && video.paused) {
+                video.play();
+            }
+        });
+
+        // Security check logic (Type "67" 3 times)
+        unlockBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (unlocked) return;
+
+            const userInput = unlockInput.value.trim();
+
+            if (userInput === "676767" && successCount === 0) {
+                successCount = 3;
+            } else if (userInput === "67") {
+                successCount++;
+                unlockInput.value = ""; 
+            } else {
+                successCount = 0;
+                unlockInput.value = "";
+                unlockStatus.textContent = "WRONG! Progress reset: 0 / 3";
+                unlockStatus.style.color = "yellow";
+
+                mrBeanOverlay.style.display = "flex";
+                setTimeout(() => {
+                    mrBeanOverlay.style.display = "none";
+                }, 2000);
+                return;
+            }
+
+            unlockStatus.textContent = `Progress: ${successCount} / 3`;
+
+            if (successCount >= 3) {
+                unlocked = true;
+                unlockStatus.style.color = "lime";
+                imageOverlay.style.display = 'none'; 
+                securityBox.style.display = 'none';
+                siteCaption.classList.remove('hidden');
+
+                startSecuritySequence();
+            }
+        });
+
+        unlockInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") unlockBtn.click();
+        });
+
+        function startSecuritySequence() {
+            if (hasStartedSequence) return;
+            hasStartedSequence = true;
+
+            videoSource.src = catVideoPath;
+            video.load();
+            video.muted = false;
+
+            video.play().catch(error => console.log("Cat video auto-play blocked by browser."));
+        }
+
+        video.addEventListener('ended', () => {
+            if (videoSource.src.includes("cat.mp4.mp4")) {
+                video.style.display = 'none';
+                introVideo.style.display = 'block';
+                introVideo.src = countdownVideoPath;
+                introVideo.load();
+                introVideo.currentTime = 0;
+                introVideo.muted = false;
+                isPlayingCountdown = true;
+
+                introVideo.play().catch(e => console.log("Countdown video autoplay blocked"));
+
+                introVideo.addEventListener('ended', () => {
+                    introVideo.style.display = 'none';
+                    isPlayingCountdown = false;
+
+                    isPlayingSlideshow = true;
+                    slideshowOverlay.style.display = 'block';
+                    let imgIndex = 0;
+                    slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+
+                    const totalDuration = 10000;
+                    const frameInterval = totalDuration / introImages.length;
+
+                    const slideInterval = setInterval(() => {
+                        imgIndex++;
+                        if (imgIndex < introImages.length) {
+                            slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
+                        } else {
+                            clearInterval(slideInterval);
+                            slideshowOverlay.style.display = 'none';
+
+                            video.style.display = 'block';
+                            isPlayingSlideshow = false;
+                            sequenceCompleted = true;
+
+                            videoSource.src = bananaVideoPath;
+                            video.load();
+                            video.currentTime = 0;
+                            video.play();
+                        }
+                    }, frameInterval);
+                }, { once: true });
+            }
+        });
+
+        // Runaway Play Button restricted ONLY to move around inside the controls rectangle area
+        playBtn.addEventListener('mouseover', () => {
+            if (!sequenceCompleted || playButtonTired) return;
+
+            playBtn.style.position = 'absolute';
+            playBtn.style.zIndex = '4000';
+
+            const rect = controlsBox.getBoundingClientRect();
+            const btnWidth = playBtn.offsetWidth || 120;
+            const btnHeight = playBtn.offsetHeight || 45;
+
+            const minX = 10;
+            const maxX = rect.width - btnWidth - 10;
+            const minY = 10;
+            const maxY = rect.height - btnHeight - 10;
+
+            const randomX = Math.max(minX, Math.floor(Math.random() * (maxX - minX + 1)));
+            const randomY = Math.max(minY, Math.floor(Math.random() * (maxY - minY + 1)));
+
+            playBtn.style.left = randomX + 'px';
+            playBtn.style.top = randomY + 'px';
+
+            playButtonTired = true;
+            setTimeout(() => { playButtonTired = false; }, 350);
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (!sequenceCompleted) {
+                alert("The play/pause button cannot be used until the actual banana video starts!");
+                return;
+            }
+            playQuack(); // Ensure quack sound works when pressed
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+
+        // ===== PLINKO MINIGAME MECHANICS =====
+        const W = canvas.width, H = canvas.height;
+        const slots = [
+            { label: "+10s", color: "#00c853", action: "fwd" },
+            { label: "-20s", color: "#d50000", action: "back" },
+            { label: "RANDOM", color: "#ffd600", action: "rand" },
+            { label: "REFRESH", color: "#aa00ff", action: "refresh" },
+            { label: "-20s", color: "#d50000", action: "back" },
+            { label: "+10s", color: "#00c853", action: "fwd" }
+        ];
+        const slotW = W / slots.length;
+        const slotTop = H - 60;
+        const pegs = [];
+        for (let r = 0; r < 9; r++) {
+            const offset = r % 2 ? slotW / 2 : 0;
+            for (let x = offset; x <= W; x += slotW) {
+                if (x > 8 && x < W - 8) pegs.push({ x, y: 70 + r * 36 });
+            }
+        }
+        let disc = null, rafId = null, busy = false;
+
+        function shuffleSlots() {
+            slots.sort(() => Math.random() - 0.5);
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "#fff";
+            pegs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.fill(); });
+            slots.forEach((s, i) => {
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = 0.85;
+                ctx.fillRect(i * slotW + 2, slotTop, slotW - 4, 60);
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#000";
+                ctx.font = "bold 11px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(s.label, i * slotW + slotW / 2, slotTop + 34);
+            });
+            if (disc) {
+                ctx.fillStyle = "cyan";
+                ctx.strokeStyle = "#fff";
+                ctx.beginPath(); ctx.arc(disc.x, disc.y, disc.r, 0, 7); ctx.fill(); ctx.stroke();
+            }
+        }
+
+        function step() {
+            disc.vy += 0.25;
+            disc.x += disc.vx;
+            disc.y += disc.vy;
+            if (disc.x < disc.r) { disc.x = disc.r; disc.vx = Math.abs(disc.vx); }
+            if (disc.x > W - disc.r) { disc.x = W - disc.r; disc.vx = -Math.abs(disc.vx); }
+            for (const p of pegs) {
+                const dx = disc.x - p.x, dy = disc.y - p.y;
+                const dist = Math.hypot(dx, dy), min = disc.r + 5;
+                if (dist < min && dist > 0) {
+                    const nx = dx / dist, ny = dy / dist;
+                    disc.x = p.x + nx * min;
+                    disc.y = p.y + ny * min;
+                    const dot = disc.vx * nx + disc.vy * ny;
+                    disc.vx = (disc.vx - 2 * dot * nx) * 0.6 + (Math.random() - 0.5) * 1.5;
+                    disc.vy = (disc.vy - 2 * dot * ny) * 0.6;
+                }
+            }
+            drawBoard();
+            if (disc.y + disc.r >= slotTop + 10) {
+                const idx = Math.max(0, Math.min(slots.length - 1, Math.floor(disc.x / slotW)));
+                const outcome = slots[idx];
+                cancelAnimationFrame(rafId);
+                busy = false;
+
+                if (outcome.action === "fwd") {
+                    video.currentTime = Math.min(video.duration || 999, video.currentTime + 10);
+                    plinkoMsg.textContent = "Skipped forward 10 seconds!";
+                } else if (outcome.action === "back") {
+                    video.currentTime = Math.max(0, video.currentTime - 20);
+                    plinkoMsg.textContent = "Skipped backward 20 seconds!";
+                } else if (outcome.action === "rand") {
+                    video.currentTime = Math.random() * (video.duration || 30);
+                    plinkoMsg.textContent = "Jumped to random timestamp!";
+                } else if (outcome.action === "refresh") {
+                    plinkoMsg.textContent = "REFRESHING PAGE!";
+                    setTimeout(() => location.reload(), 800);
+                    return;
+                }
+                setTimeout(() => { plinkoModal.style.display = "none"; }, 1000);
+                return;
+            }
+            rafId = requestAnimationFrame(step);
+        }
+
+        skipBtn.addEventListener("click", () => {
+            if (!unlocked) {
+                alert("Unlock the player first!");
+                return;
+            }
+            if (busy) return;
+            busy = true;
+            shuffleSlots();
+            disc = { x: W / 2 + (Math.random() * 40 - 20), y: 20, r: 8, vx: (Math.random() - 0.5) * 2, vy: 0 };
+            plinkoMsg.textContent = "Dropping disc...";
+            plinkoModal.style.display = "flex";
+            drawBoard();
+            rafId = requestAnimationFrame(step);
+        });
+
+        canvas.addEventListener("click", (e) => {
+            if (!disc && busy) {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                disc = { x: clickX, y: 20, r: 8, vx: (Math.random() - 0.5) * 3, vy: 0 };
+            }
+        });
+
+        // Fake Ads Trigger (Slime / Squishy popups) strictly every 10 seconds
+        const ads = [
+            { tag: "SQUISHY EMERGENCY", title: "THE 900% SQUISHY", body: "Squeeze it. It remembers. It always remembers.", button: "SQUISH NOW" },
+            { tag: "SLIME CLEARANCE", title: "MIDNIGHT GLOW SLIME", body: "Glows in the dark. Sticks to everything. Including your regrets.", button: "GET THE GOO" },
+            { tag: "LIMITED OFFER", title: "MYSTERY SQUISHY BOX", body: "One box. Three mystery squishies. Zero explanations.", button: "OPEN THE BOX" },
+            { tag: "DO NOT IGNORE", title: "HAUNTED PURPLE SLIME", body: "It bubbles when nobody touches it. Probably normal.", button: "ADD TO CART" }
+        ];
+
+        function maybeShowAd() {
+            const ad = ads[adCount % ads.length];
+            adCount++;
+
+            const popup = document.createElement("section");
+            popup.className = "ad-popup";
+            popup.setAttribute("role", "dialog");
+            popup.setAttribute("aria-label", "Fake squishy and slime advertisement");
+            
+            const left = Math.max(10, (window.innerWidth - 680) / 2 + (Math.random() * 40 - 20));
+            const top = Math.max(10, (window.innerHeight - 420) / 2 + (Math.random() * 40 - 20));
+            popup.style.left = `${left}px`;
+            popup.style.top = `${top}px`;
+
+            popup.innerHTML = `
+                <button class="ad-close" type="button" aria-label="Close advertisement">X</button>
+                <div class="ad-tag">ADVERTISEMENT // ${ad.tag}</div>
+                <h3>${ad.title}</h3>
+                <p>${ad.body}</p>
+                <button class="ad-buy" type="button">${ad.button}</button>
+            `;
+
+            popup.querySelector(".ad-close").addEventListener("click", () => popup.remove());
+            popup.querySelector(".ad-buy").addEventListener("click", () => {
+                popup.querySelector("p").textContent = "THANK YOU. YOUR PURCHASE HAS BEEN RECORDED BY THE VOID.";
+                popup.querySelector(".ad-buy").textContent = "OH NO";
+            });
+
+            adLayer.appendChild(popup);
+        }
+
+        // Trigger fake pop-up ads every 10 seconds once unlocked
+        window.setInterval(() => {
+            if (unlocked) {
+                maybeShowAd();
+            }
+        }, 10000);
+
+    })();
+    </script>
+</body>
+</html>
