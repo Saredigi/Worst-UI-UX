@@ -110,7 +110,7 @@
         #image-overlay {
             position: absolute;
             inset: 0;
-            background: #000 url('file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20122843.png') no-repeat center center;
+            background: #000 url('Screenshot 2026-11-07 122843.png') no-repeat center center;
             background-size: cover;
             z-index: 50;
             pointer-events: none;
@@ -141,7 +141,7 @@
 
         .controls {
             position: relative;
-            z-index: 999999; /* Ensure controls and play button sit on top of everything */
+            z-index: 999999;
             background: cyan; 
             padding: 15px; 
             display: flex; 
@@ -191,7 +191,7 @@
             font-family: "Comic Sans MS", cursive;
             cursor: crosshair; 
             transition: transform 0.1s, left 0.2s ease, top 0.2s ease;
-            z-index: 1000000; /* Always on top */
+            z-index: 1000000;
         }
         
         #play-btn:hover { 
@@ -333,7 +333,7 @@
 
     <!-- MR BEAN JUMP SCARE OVERLAY -->
     <div id="mr-bean-overlay">
-        <img src="file:///C:/Users/20230970/Downloads/mr-bean.gif" alt="Wrong Security Code">
+        <img src="mr-bean.gif" alt="Wrong Security Code">
     </div>
 
     <!-- 1. OMINOUS WELCOME POPUP -->
@@ -376,13 +376,13 @@
         <div id="image-overlay"></div>
         
         <!-- 5-4-3-2-1 countdown video overlay -->
-        <video id="introPlayer" src="file:///C:/Users/20230970/Downloads/intro 5 4 3 2 1 (Old Film).mp4" playsinline></video>
+        <video id="introPlayer" src="intro 5 4 3 2 1 (Old Film).mp4" playsinline></video>
         
         <!-- Interruption slideshow overlay -->
         <div id="slideshow-overlay"></div>
 
         <video id="videoPlayer" playsinline style="background: black;">
-            <source id="videoSource" src="file:///C:/Users/20230957/Downloads/cat.mp4.mp4" type="video/mp4">
+            <source id="videoSource" src="cat.mp4.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         <div id="subtitles"></div>
@@ -416,7 +416,7 @@
         <div class="ad-video-wrapper">
             <div class="ad-header">🧡 TALABAT SPONSORED AD 🍔</div>
             <video id="talabatAdVideo" playsinline autoplay muted>
-                <source src="file:///C:/Users/20230970/Downloads/talabat_ad.mp4.mp4" type="video/mp4">
+                <source src="talabat_ad.mp4.mp4" type="video/mp4">
                 Your browser does not support video ads.
             </video>
         </div>
@@ -465,15 +465,15 @@
         const plinkoMsg = document.getElementById("plinko-msg");
         const plinkoCancel = document.getElementById("plinko-cancel");
 
-        const catVideoPath = "file:///C:/Users/20230970/Downloads/cat.mp4.mp4";
-        const countdownVideoPath = "file:///C:/Users/20230970/Downloads/intro 5 4 3 2 1 (Old Film).mp4";
-        const bananaVideoPath = "file:///C:/Users/20230970/Downloads/banana.mp4.mp4";
+        const catVideoPath = "cat.mp4.mp4";
+        const countdownVideoPath = "intro 5 4 3 2 1 (Old Film).mp4";
+        const bananaVideoPath = "banana.mp4.mp4";
 
         const introImages = [
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142744.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142905.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142929.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142811.png"
+            "Screenshot 2026-11-07 142744.png",
+            "Screenshot 2026-11-07 142905.png",
+            "Screenshot 2026-11-07 142929.png",
+            "Screenshot 2026-11-07 142811.png"
         ];
 
         let successCount = 0;
@@ -703,7 +703,7 @@
                             clearInterval(slideInterval);
                             slideshowOverlay.style.display = 'none';
 
-                            // RIGHT AFTER THE 2ND IMAGE (or end of gallery), trigger Talabat Ad as requested:
+                            // RIGHT AFTER THE 2ND IMAGE (which is index 1, or right here after gallery completes), trigger Talabat Ad as requested:
                             triggerTalabatAd();
 
                             video.style.display = 'block';
