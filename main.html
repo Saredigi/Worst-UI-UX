@@ -1,626 +1,565 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>The Worst Video Player Ever</title>
-    <style>
-        * { box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>The Worst Video Player Ever</title>
+<style>
+    * { box-sizing: border-box; }
 
-        @keyframes flashBackground {
-            0% { background-color: #ff00ff; }
-            50% { background-color: #00ffff; }
-            100% { background-color: #ff00ff; }
-        }
+    @keyframes flashBackground {
+        0% { background-color: #ffffff; }
+        50% { background-color: #000000; }
+        100% { background-color: #ffffff; }
+    }
+    body {
+        background: #ff00ff;
+        color: #111;
+        font-family: "Comic Sans MS", "Chalkboard SE", cursive;
+        text-align: center;
+        margin: 0;
+        padding: 35px 12px 60px;
+        animation: flashBackground 0.5s infinite;
+    }
+    h1 { color: lime; text-shadow: 4px 4px red; transform: rotate(-1deg); }
+    #video-container {
+        position: relative;
+        width: min(640px, 94vw);
+        aspect-ratio: 16 / 9;
+        margin: 20px auto;
+        border: 12px dotted lime;
+        background: #000;
+        overflow: hidden;
+    }
+    video { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+    #image-overlay {
+        position: absolute; inset: 0;
+        background: url("image_783f37.jpg") center / cover no-repeat;
+        z-index: 5;
+    }
+    #subtitles {
+        position: absolute; bottom: 25px; left: 0; width: 100%;
+        color: yellow; font-size: clamp(16px, 4vw, 30px);
+        font-weight: bold; text-shadow: 3px 3px red;
+        pointer-events: none; z-index: 8;
+    }
+    #security-box {
+        background: red; padding: 20px; border: 5px dashed yellow;
+        color: white; font-size: 19px;
+        width: min(640px, 94vw); margin: 0 auto 20px;
+    }
+    #unlock-input { background: cyan; border: 3px solid magenta; font-size: 20px; width: 100px; text-align: center; }
+    #unlock-btn { background: lime; border: 3px solid blue; cursor: pointer; padding: 7px 14px; }
+    .controls {
+        background: cyan; padding: 15px; display: flex; flex-wrap: wrap;
+        align-items: center; justify-content: center; gap: 12px;
+        border: 5px solid red; width: min(640px, 94vw); margin: auto;
+    }
+    .main-btn {
+        background: orange; border: 3px solid brown; padding: 10px 18px;
+        font-size: 17px; font-family: "Comic Sans MS", cursive; cursor: crosshair;
+    }
+    #play-btn:hover { transform: translate(5px, -5px) rotate(4deg); }
+    #skip-btn { background: #9cff00; border-color: green; }
+    select { background: pink; font-size: 16px; border: 3px solid purple; padding: 5px; }
+    .volume-wrap { display: flex; flex-direction: column; gap: 3px; font-weight: bold; }
+    #volume-slider { accent-color: red; width: 145px; cursor: ew-resize; }
+    #volume-note { font-size: 11px; color: #6a006a; }
+    #status { font-family: "Courier New", monospace; font-size: 12px; margin: 12px; }
 
-        body {
-            background: #ff00ff;
-            color: #111;
-            font-family: "Comic Sans MS", "Chalkboard SE", cursive;
-            text-align: center;
-            margin: 0;
-            padding: 20px 12px 60px;
-            animation: flashBackground 0.8s infinite;
-            overflow-x: hidden;
-        }
+    /* Misplaced layout */
+    body { overflow-x: hidden; }
+    #video-container { translate: var(--vol-shift, 0px) 0; }
+    #status, #video-container, #security-box, .controls { position: relative; transition: left .4s, top .4s, transform .4s; }
 
-        #status { font-family: "Courier New", monospace; font-size: 14px; font-weight: bold; margin: 12px; color: #000; background: yellow; display: inline-block; padding: 4px 10px; border: 2px solid black; }
+    /* Plinko */
+    #plinko-modal {
+        position: fixed; inset: 0; background: rgba(0,0,0,.85);
+        display: none; justify-content: center; align-items: center;
+        z-index: 9000; padding: 10px;
+    }
+    .plinko-box {
+        background: #1a0033; border: 6px ridge #ff39c8; padding: 12px;
+        color: #fff; width: 380px; max-width: 98vw;
+    }
+    .plinko-box h2 { margin: 0 0 6px; color: yellow; font-size: 20px; text-shadow: 2px 2px red; }
+    #plinko-canvas { background: #0b0020; border: 3px solid cyan; max-width: 100%; display: block; margin: 0 auto; cursor: pointer; }
+    #plinko-msg { min-height: 24px; font-weight: bold; color: lime; margin: 8px 0 0; }
+    #plinko-cancel { margin-top: 6px; font-size: 11px; background: #333; color: #aaa; border: 1px solid #666; cursor: pointer; }
 
-        /* WEBSITE LEVEL BANNER CAPTION */
-        #site-caption {
-            font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 45px;
-            color: #ffeb3b;
-            text-transform: uppercase;
-            text-shadow: 4px 4px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000;
-            margin-bottom: 15px;
-            animation: siteBounce 0.6s infinite alternate;
-        }
+    /* Ominous session popup */
+    #welcome-popup {
+        position: fixed; inset: 0; background: rgba(0,0,0,.97);
+        display: none; justify-content: center; align-items: center;
+        z-index: 10000; padding: 15px;
+    }
+    .popup-box {
+        background: #080808; color: #b5b5b5; width: 420px; max-width: 95%;
+        padding: 30px; border: 1px solid #5b0000;
+        box-shadow: 0 0 30px rgba(150,0,0,.3);
+        font-family: "Courier New", monospace; text-align: center;
+        animation: popupAppear 1s ease;
+    }
+    .warning-icon { color: darkred; font-size: 48px; animation: pulse 2s infinite; }
+    .system-label { color: #a00000; font-size: 11px; letter-spacing: 2px; }
+    .popup-box h2 { color: #a00000; font-size: 23px; letter-spacing: 1px; }
+    .popup-divider { height: 1px; background: #4b0000; margin: 20px 0; }
+    .small-warning { color: darkred; font-weight: bold; letter-spacing: 2px; }
+    .popup-box button { background: transparent; color: #c22; border: 1px solid #720000; padding: 12px 22px; cursor: pointer; font-family: inherit; letter-spacing: 2px; }
+    .popup-box button:hover { background: #720000; color: white; }
+    .footer-text { font-size: 10px; color: #555; margin-top: 22px; }
 
-        @keyframes siteBounce {
-            from { transform: translateY(0); }
-            to { transform: translateY(-10px); }
-        }
-
-        #video-container { 
-            position: relative; 
-            width: min(640px, 94vw); 
-            height: 360px;
-            margin: 0 auto 20px auto; 
-            border: 12px dotted lime; 
-            background-color: black;
-            overflow: hidden;
-        }
-        
-        video { 
-            width: 100%; 
-            height: 100%;
-            display: block;
-            object-fit: cover;
-        }
-
-        #introPlayer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 52;
-            display: none;
-            pointer-events: none;
-        }
-        
-        #subtitles { 
-            position: absolute; 
-            bottom: 40px; 
-            width: 100%; 
-            text-align: center; 
-            color: yellow; 
-            font-size: 32px; 
-            font-weight: bold; 
-            text-shadow: 3px 3px red;
-            pointer-events: none; 
-            z-index: 60;
-        }
-
-        #image-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000 url('image_783f37.jpg') no-repeat center center;
-            background-size: cover;
-            z-index: 50;
-        }
-
-        #slideshow-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-size: cover;
-            background-position: center;
-            background-color: black;
-            z-index: 55;
-            display: none;
-        }
-
-        #security-box {
-            position: relative;
-            z-index: 100;
-            background: rgba(255, 0, 0, 1);
-            padding: 20px;
-            border: 5px dashed yellow;
-            color: white;
-            font-size: 20px;
-            width: min(640px, 94vw);
-            margin: 0 auto 30px auto;
-        }
-
-        #unlock-input {
-            background: cyan;
-            border: 3px solid magenta;
-            font-size: 20px;
-            width: 100px;
-            text-align: center;
-        }
-
-        #unlock-btn {
-            position: relative;
-            z-index: 101;
-            background: lime;
-            border: 3px solid blue;
-            cursor: pointer;
-            padding: 7px 14px;
-            font-weight: bold;
-        }
-        
-        .controls { 
-            background: cyan; 
-            padding: 15px; 
-            display: flex; 
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-around; 
-            gap: 10px;
-            border: 5px solid red;
-            width: min(640px, 94vw);
-            margin: 0 auto;
-        }
-        
-        .main-btn { 
-            background: orange; 
-            border: 3px solid brown; 
-            padding: 10px 20px; 
-            font-size: 18px;
-            font-family: "Comic Sans MS", cursive;
-            cursor: crosshair; 
-            z-index: 100;
-            transition: transform 0.1s, left 0.2s ease, top 0.2s ease;
-        }
-
-        select {
-            background: pink;
-            font-size: 18px;
-            border: 3px solid purple;
-            padding: 5px;
-        }
-
-        .volume-wrap { display: flex; flex-direction: column; gap: 3px; font-weight: bold; font-size: 14px; }
-        #volume-slider { accent-color: red; width: 145px; cursor: ew-resize; }
-        #volume-note { font-size: 11px; color: #6a006a; }
-
-        /* OMINOUS POPUP */
-        #welcome-popup {
-            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.97);
-            display: none; justify-content: center; align-items: center;
-            z-index: 99999; padding: 15px;
-        }
-
-        .popup-box {
-            background: #080808; color: #b5b5b5; width: 420px; max-width: 95%;
-            padding: 35px; border: 1px solid #5b0000;
-            box-shadow: 0 0 30px rgba(150, 0, 0, 0.3);
-            font-family: "Courier New", monospace; text-align: center;
-            animation: popupAppear 1.5s ease;
-        }
-
-        .warning-icon { color: darkred; font-size: 55px; animation: warningPulse 2s infinite; }
-        .system-label { color: #720000; font-size: 11px; letter-spacing: 3px; }
-        .popup-box h2 { color: #a00000; font-size: 24px; letter-spacing: 2px; line-height: 1.5; }
-        .popup-divider { height: 1px; background: #4b0000; margin: 25px 0; }
-        .small-warning { color: darkred; font-weight: bold; letter-spacing: 3px; margin-top: 30px; }
-        .popup-box button {
-            background: transparent; color: #a00000; border: 1px solid #720000;
-            padding: 13px 30px; margin-top: 20px; font-family: "Courier New", monospace;
-            letter-spacing: 3px; cursor: pointer; transition: 0.3s;
-        }
-        .popup-box button:hover { background: #720000; color: white; box-shadow: 0 0 20px red; }
-        .footer-text { font-size: 10px; color: #555; margin-top: 30px; letter-spacing: 2px; }
-
-        @keyframes warningPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        @keyframes popupAppear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-
-        /* POP-UP VIDEO AD MODAL STYLES */
-        .ad-modal {
-            display: none; position: fixed; inset: 0;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 999999; justify-content: center; align-items: center;
-        }
-
-        .ad-video-wrapper {
-            position: relative; width: min(640px, 94vw);
-            background: #ff5a00; border: 5px solid white;
-            border-radius: 12px; overflow: hidden;
-            box-shadow: 0 0 30px #ff5a00;
-        }
-
-        .ad-header { background: #ff5a00; color: white; font-weight: bold; padding: 10px; font-size: 20px; }
-        .ad-video-wrapper video { width: 100%; height: 360px; pointer-events: none; }
-
-        #closeAdBtn {
-            position: fixed; z-index: 1000000;
-            background: yellow; color: black; border: 4px solid red;
-            font-weight: bold; font-size: 18px; padding: 14px 28px;
-            cursor: pointer; display: none; box-shadow: 0 0 15px yellow;
-            transition: top 0.5s ease-out, left 0.5s ease-out;
-        }
-
-        /* Fake in-page product ads */
-        #ad-layer { position: fixed; inset: 0; pointer-events: none; z-index: 5000; }
-        .ad-popup {
-            pointer-events: auto; position: absolute; 
-            width: min(85vw, 680px); min-height: min(60vh, 420px);
-            background: #fff8a8; color: #241324; border: 8px ridge #ff39c8;
-            box-shadow: 12px 12px 0 rgba(0,0,0,.6); padding: 25px;
-            text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            animation: adJiggle .25s ease-in-out 2;
-        }
-        .ad-popup h3 { margin: 10px 0; color: #e00091; font-size: clamp(24px, 5vw, 36px); }
-        .ad-popup p { margin: 15px 0 20px; font-size: clamp(16px, 3vw, 22px); line-height: 1.4; }
-        .ad-popup .ad-tag { font: bold 12px "Courier New", monospace; color: #666; letter-spacing: 2px; }
-        .ad-popup .ad-close {
-            position: absolute; top: 3px; right: 3px; border: 1px solid #000;
-            background: red; color: white; font-weight: bold; cursor: pointer;
-            width: 14px; height: 14px; line-height: 10px; font-size: 9px; padding: 0;
-        }
-        .ad-popup .ad-buy {
-            border: 4px outset #00d900; background: #9cff00; padding: 14px 28px;
-            font-size: 20px; font-weight: bold; cursor: pointer; font-family: inherit;
-        }
-
-        @keyframes adJiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
-        .hidden { display: none !important; }
-    </style>
+    /* Fake in-page product ads - Massive size, tiny close button */
+    #ad-layer {
+        position: fixed; inset: 0; pointer-events: none;
+        z-index: 5000;
+    }
+    .ad-popup {
+        pointer-events: auto; position: absolute; 
+        width: min(85vw, 680px); 
+        min-height: min(60vh, 420px);
+        background: #fff8a8; color: #241324; border: 8px ridge #ff39c8;
+        box-shadow: 12px 12px 0 rgba(0,0,0,.6); padding: 25px;
+        text-align: center; font-family: "Comic Sans MS", cursive;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        animation: adJiggle .25s ease-in-out 2;
+    }
+    .ad-popup h3 { margin: 10px 0; color: #e00091; font-size: clamp(24px, 5vw, 36px); }
+    .ad-popup p { margin: 15px 0 20px; font-size: clamp(16px, 3vw, 22px); line-height: 1.4; }
+    .ad-popup .ad-tag { font: bold 12px "Courier New", monospace; color: #666; letter-spacing: 2px; }
+    
+    /* Intentionally tiny close button */
+    .ad-popup .ad-close {
+        position: absolute; top: 3px; right: 3px; border: 1px solid #000;
+        background: red; color: white; font-weight: bold; cursor: pointer;
+        width: 12px; height: 12px; line-height: 10px; font-size: 8px; padding: 0;
+    }
+    .ad-popup .ad-buy {
+        border: 4px outset #00d900; background: #9cff00; padding: 14px 28px;
+        font-size: 20px; font-weight: bold; cursor: pointer; font-family: inherit;
+    }
+    @keyframes pulse { 50% { opacity: .2; } }
+    @keyframes popupAppear { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes adJiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+</style>
 </head>
 <body>
 
-    <p id="status">PLAYER STATUS: WAITING FOR AUTHORIZATION</p>
+<p id="status">PLAYER STATUS: WAITING FOR AUTHORIZATION</p>
 
-    <!-- OMINOUS WELCOME POPUP -->
-    <div id="welcome-popup">
-        <div class="popup-box">
-            <div class="warning-icon">⚠</div>
-            <p class="system-label">UNKNOWN SYSTEM // SESSION DETECTED</p>
-            <h2>YOU WERE NOT SUPPOSED TO BE HERE.</h2>
-            <div class="popup-divider"></div>
-            <p>An unauthorized session has been detected.</p>
-            <p>Do not attempt to close this window.<br>Do not refresh the page.<br>Do not trust what you see.</p>
-            <p class="small-warning">WE KNOW YOU ARE HERE.</p>
-            <button id="close-popup" type="button">I UNDERSTAND</button>
-            <p class="footer-text">SESSION MONITORING ACTIVE...</p>
-        </div>
+<div id="welcome-popup">
+    <div class="popup-box">
+        <div class="warning-icon">⚠</div>
+        <p class="system-label">UNKNOWN SYSTEM // SESSION DETECTED</p>
+        <h2>YOU WERE NOT SUPPOSED TO BE HERE.</h2>
+        <div class="popup-divider"></div>
+        <p>An unauthorized session has been detected.</p>
+        <p>Do not attempt to close this window.<br>Do not refresh the page.<br>Do not trust what you see.</p>
+        <p class="small-warning">WE KNOW YOU ARE HERE.</p>
+        <button id="close-popup" type="button">I UNDERSTAND</button>
+        <p class="footer-text">SESSION MONITORING ACTIVE...</p>
     </div>
+</div>
 
-    <!-- WEBSITE LEVEL BANNER CAPTION -->
-    <div id="site-caption" class="hidden">YOU DEED EET! 👏</div>
-
-    <!-- MAIN PLAYER CONTAINER -->
-    <div id="video-container">
-        <div id="image-overlay"></div>
-        
-        <!-- 5-4-3-2-1 countdown video overlay -->
-        <video id="introPlayer" src="file:///C:/Users/20230970/Downloads/intro 5 4 3 2 1 (Old Film).mp4" playsinline></video>
-        
-        <!-- Interruption slideshow overlay -->
-        <div id="slideshow-overlay"></div>
-
-        <video id="videoPlayer" playsinline loop style="background: black;">
-            <source id="videoSource" src="file:///C:/Users/20230970/Downloads/videoplayback.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-        <div id="subtitles"></div>
+<div id="plinko-modal">
+    <div class="plinko-box">
+        <h2>SKIP FORWARD 10 SECONDS?</h2>
+        <canvas id="plinko-canvas" width="360" height="420"></canvas>
+        <p id="plinko-msg">Click the board to drop your disc!</p>
+        <button type="button" id="plinko-cancel">(there is no cancel)</button>
     </div>
-    
-    <!-- SECURITY CHECK BOX -->
-    <div id="security-box">
-        <p><strong>SECURITY CHECK</strong><br>Type "67" and click Submit 3 times to unlock!</p>
-        <input type="text" id="unlock-input" placeholder="??" autocomplete="off" inputmode="numeric">
-        <button id="unlock-btn" type="button">Submit</button>
-        <p id="unlock-status">Progress: 0 / 3</p>
-    </div>
+</div>
 
-    <!-- CONTROLS -->
-    <div class="controls">
-        <button id="play-btn" class="main-btn" type="button">PLAY / PAUSE</button>
-        <select id="sub-lang">
-            <option value="en" selected>English</option>
-            <option value="none">Subtitles: Off</option>
-        </select>
-        <label class="volume-wrap">
-            <span>VOLUME</span>
-            <input id="volume-slider" type="range" min="0" max="100" value="50">
-            <span id="volume-note">Volume 50</span>
-        </label>
-    </div>
+<div id="video-container">
+    <video id="videoPlayer" playsinline preload="metadata">
+        <source src="videoplayback.mp4" type="video/mp4">
+        Your browser does not support the video element.
+    </video>
+    <div id="image-overlay"></div>
+    <div id="subtitles"></div>
+</div>
 
-    <!-- FORCED TALABAT VIDEO AD MODAL -->
-    <div id="adModal" class="ad-modal">
-        <div class="ad-video-wrapper">
-            <div class="ad-header">🧡 TALABAT SPONSORED AD 🍔</div>
-            <video id="talabatAdVideo" playsinline autoplay muted>
-                <source src="file:///C:/Users/20230957/Downloads/talabat_ad.mp4.mp4" type="video/mp4">
-            </video>
-        </div>
-    </div>
+<div id="security-box">
+    <p><strong>SECURITY CHECK</strong><br>Type "67" and click Submit 3 times to unlock!</p>
+    <input type="text" id="unlock-input" placeholder="??" autocomplete="off" inputmode="numeric">
+    <button type="button" id="unlock-btn">Submit</button>
+    <p id="unlock-status">Progress: 0 / 3</p>
+</div>
 
-    <!-- SMOOTH MOVING SKIP BUTTON -->
-    <button id="closeAdBtn" type="button">Skip Ad & Continue</button>
+<div class="controls">
+    <button type="button" id="play-btn" class="main-btn">PLAY</button>
+    <button type="button" id="skip-btn" class="main-btn">+10s</button>
+    <select id="sub-lang">
+        <option value="none">Subtitles: Off</option>
+        <option value="en">English</option>
+    </select>
+    <label class="volume-wrap">
+        <span>VOLUME</span>
+        <input id="volume-slider" type="range" min="0" max="100" value="50">
+        <span id="volume-note">Volume 50 </span>
+    </label>
+</div>
 
-    <!-- FAKE PRODUCT AD LAYER -->
-    <div id="ad-layer" aria-live="polite"></div>
+<div id="ad-layer" aria-live="polite"></div>
 
-    <!-- AUDIO ELEMENT FOR QUACK -->
-    <audio id="quackSound" src="file:///C:/Users/20230970/Downloads/Quack%20Sound%20Effect.mp3"></audio>
+<script>
+(() => {
+    const video = document.getElementById("videoPlayer");
+    const subDisplay = document.getElementById("subtitles");
+    const playBtn = document.getElementById("play-btn");
+    const skipBtn = document.getElementById("skip-btn");
+    const langSelect = document.getElementById("sub-lang");
+    const imageOverlay = document.getElementById("image-overlay");
+    const securityBox = document.getElementById("security-box");
+    const unlockInput = document.getElementById("unlock-input");
+    const unlockBtn = document.getElementById("unlock-btn");
+    const unlockStatus = document.getElementById("unlock-status");
+    const welcomePopup = document.getElementById("welcome-popup");
+    const closePopup = document.getElementById("close-popup");
+    const volumeSlider = document.getElementById("volume-slider");
+    const volumeNote = document.getElementById("volume-note");
+    const adLayer = document.getElementById("ad-layer");
+    const status = document.getElementById("status");
+    const plinkoModal = document.getElementById("plinko-modal");
+    const canvas = document.getElementById("plinko-canvas");
+    const ctx = canvas.getContext("2d");
+    const plinkoMsg = document.getElementById("plinko-msg");
+    const plinkoCancel = document.getElementById("plinko-cancel");
 
-    <script>
-    (() => {
-        const welcomePopup = document.getElementById("welcome-popup");
-        const closePopup = document.getElementById("close-popup");
-        const siteCaption = document.getElementById("site-caption");
+    let successCount = 0;
+    let unlocked = false;
+    let adCount = 0;
 
-        const video = document.getElementById('videoPlayer');
-        const introVideo = document.getElementById('introPlayer');
-        const quack = document.getElementById('quackSound');
-        const subDisplay = document.getElementById('subtitles');
-        const playBtn = document.getElementById('play-btn');
-        const langSelect = document.getElementById('sub-lang');
-        
-        const imageOverlay = document.getElementById('image-overlay');
-        const slideshowOverlay = document.getElementById('slideshow-overlay');
-        const securityBox = document.getElementById('security-box');
-        const unlockInput = document.getElementById('unlock-input');
-        const unlockBtn = document.getElementById('unlock-btn');
-        const unlockStatus = document.getElementById('unlock-status');
-        const status = document.getElementById("status");
-
-        const volumeSlider = document.getElementById("volume-slider");
-        const volumeNote = document.getElementById("volume-note");
-        const adLayer = document.getElementById("ad-layer");
-
-        const adModal = document.getElementById('adModal');
-        const talabatAdVideo = document.getElementById('talabatAdVideo');
-        const closeAdBtn = document.getElementById('closeAdBtn');
-
-        let successCount = 0;
-        let unlocked = false;
-        let adCount = 0;
-        let lastMoveTime = 0;
-        let buttonCaught = false; 
-        let buttonTired = false; 
-        let hasShownIntro = false; 
-
-        const introImages = [
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142744.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142905.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142929.png",
-            "file:///C:/Users/20230970/Pictures/Screenshots/Screenshot%202026-11-07%20142811.png"
-        ];
-
-        // Ominous popup handling
-        try {
-            if (!sessionStorage.getItem("worstPlayerPopupShown")) {
-                welcomePopup.style.display = "flex";
-                sessionStorage.setItem("worstPlayerPopupShown", "yes");
-            }
-        } catch (e) {
+    // Show the ominous welcome once per tab session.
+    try {
+        if (!sessionStorage.getItem("worstPlayerPopupShown")) {
             welcomePopup.style.display = "flex";
+            sessionStorage.setItem("worstPlayerPopupShown", "yes");
         }
+    } catch (error) {
+        welcomePopup.style.display = "flex";
+    }
 
-        // Close ominous popup -> Open Talabat Video Ad Modal
-        closePopup.addEventListener("click", () => {
-            welcomePopup.style.display = "none";
-            adModal.style.display = "flex";
-            closeAdBtn.style.display = "block";
-            teleportButton();
-            talabatAdVideo.muted = false;
-            talabatAdVideo.play().catch(err => console.log("Ad auto-play blocked."));
-            window.setTimeout(() => maybeShowAd("welcome"), 5000);
-        });
+    closePopup.addEventListener("click", () => {
+        welcomePopup.style.display = "none";
+    });
 
-        // Teleporting Skip Button Evasion
-        function teleportButton() {
-            const now = Date.now();
-            if (now - lastMoveTime < 400) return;
-            lastMoveTime = now;
+    // Reversed volume logic
+    function updateInvertedVolume() {
+        const sliderValue = Number(volumeSlider.value);
+        const actualVolume = 1 - (sliderValue / 100);
+        video.volume = Math.max(0, Math.min(1, actualVolume));
+        volumeNote.textContent = `Volume ${sliderValue}`;
+        const maxShift = Math.min(160, window.innerWidth * 0.2);
+        document.getElementById("video-container").style.setProperty("--vol-shift", `${((sliderValue - 50) / 50) * maxShift}px`);
+    }
+    volumeSlider.addEventListener("input", updateInvertedVolume);
+    updateInvertedVolume();
 
-            const padding = 80;
-            const maxX = window.innerWidth - closeAdBtn.offsetWidth - padding;
-            const maxY = window.innerHeight - closeAdBtn.offsetHeight - padding;
+    // Unlock logic
+    unlockBtn.addEventListener("click", () => {
+        if (unlocked) return;
 
-            const randomX = Math.max(padding, Math.floor(Math.random() * maxX));
-            const randomY = Math.max(padding, Math.floor(Math.random() * maxY));
-
-            closeAdBtn.style.left = `${randomX}px`;
-            closeAdBtn.style.top = `${randomY}px`;
-        }
-
-        closeAdBtn.addEventListener("mouseenter", teleportButton);
-        talabatAdVideo.addEventListener('ended', closeAdAndShowSecurity);
-        closeAdBtn.addEventListener('click', closeAdAndShowSecurity);
-
-        function closeAdAndShowSecurity() {
-            talabatAdVideo.pause();
-            adModal.style.display = 'none';
-            closeAdBtn.style.display = 'none';
-        }
-
-        // Reversed Volume Logic
-        function updateInvertedVolume() {
-            const sliderValue = Number(volumeSlider.value);
-            const actualVolume = 1 - (sliderValue / 100);
-            video.volume = Math.max(0, Math.min(1, actualVolume));
-            volumeNote.textContent = `Volume ${sliderValue}`;
-        }
-        volumeSlider.addEventListener("input", updateInvertedVolume);
-        updateInvertedVolume();
-
-        // Security check logic
-        unlockBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (unlocked) return;
-            const userInput = unlockInput.value.trim();
-
-            if (userInput === "676767" && successCount === 0) {
-                successCount = 3;
-            } else if (userInput === "67") {
-                successCount++;
-                unlockInput.value = ""; 
-            } else {
-                alert("WRONG! Starting over.");
-                successCount = 0;
-                unlockInput.value = "";
-            }
-
+        if (unlockInput.value.trim() === "67") {
+            successCount++;
             unlockStatus.textContent = `Progress: ${successCount} / 3`;
+            unlockStatus.style.color = "lime";
+            unlockInput.value = "";
 
-            if (successCount >= 3) {
+            if (successCount === 3) {
                 unlocked = true;
-                unlockStatus.style.color = "lime";
-                imageOverlay.style.display = 'none'; 
-                securityBox.style.display = 'none';
-                siteCaption.classList.remove('hidden');
+                imageOverlay.style.display = "none";
+                securityBox.style.display = "none";
                 status.textContent = "PLAYER STATUS: AUTHORIZATION ACCEPTED";
+                maybeShowAd("unlock");
             }
-        });
+        } else {
+            successCount = 0;
+            unlockInput.value = "";
+            unlockStatus.textContent = "WRONG. Progress reset: 0 / 3";
+            unlockStatus.style.color = "yellow";
+        }
+    });
 
-        unlockInput.addEventListener("keydown", event => {
-            if (event.key === "Enter") unlockBtn.click();
-        });
+    unlockInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") unlockBtn.click();
+    });
 
-        // Runaway Button Logic
-        playBtn.addEventListener('mouseover', () => {
-            if (!unlocked || buttonCaught || buttonTired) return; 
-
-            playBtn.style.position = 'fixed';
-            const maxX = window.innerWidth - playBtn.offsetWidth - 20;
-            const maxY = window.innerHeight - playBtn.offsetHeight - 20;
-            
-            const randomX = Math.max(20, Math.floor(Math.random() * maxX));
-            const randomY = Math.max(20, Math.floor(Math.random() * maxY));
-            
-            playBtn.style.left = randomX + 'px';
-            playBtn.style.top = randomY + 'px';
-
-            buttonTired = true;
-            setTimeout(() => { buttonTired = false; }, 400);
-        });
-
-        // The Grand Play Sequence (Intro Video -> Slideshow -> Main Video)
-        playBtn.addEventListener('click', () => {
-            if (!unlocked) {
-                status.textContent = "PLAYER STATUS: ACCESS DENIED";
-                alert("You must unlock the video first by submitting '67' three times!");
-                return;
-            }
-
-            buttonCaught = true;
-            playBtn.style.position = 'static';
-
-            if (!hasShownIntro) {
-                hasShownIntro = true;
-                status.textContent = "PLAYER STATUS: INITIALIZING SEQUENCE...";
-                
-                // 1. Show and play the countdown intro video
-                introVideo.style.display = 'block';
-                introVideo.play().catch(e => console.log("Intro autoplay blocked"));
-                
-                // 2. Wait for the countdown video to finish
-                introVideo.addEventListener('ended', () => {
-                    introVideo.style.display = 'none';
-                    
-                    // 3. Start the slideshow sequence
-                    slideshowOverlay.style.display = 'block';
-                    let imgIndex = 0;
-                    slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
-                    
-                    const slideInterval = setInterval(() => {
-                        imgIndex++;
-                        if (imgIndex < introImages.length) {
-                            slideshowOverlay.style.backgroundImage = `url('${introImages[imgIndex]}')`;
-                        } else {
-                            // 4. Finish sequence, Quack, and play main video
-                            clearInterval(slideInterval);
-                            slideshowOverlay.style.display = 'none';
-                            quack.play().catch(e => console.log("Quack sound blocked"));
-                            
-                            video.muted = false;
-                            video.play();
-                            status.textContent = "PLAYER STATUS: PLAYING";
-                            maybeShowAd("unlock");
-                        }
-                    }, 1200); // Wait 1.2 seconds per image
-                }, { once: true });
-            } else {
-                // Intro already shown, normal play/pause logic
-                if (video.paused) {
-                    video.play();
-                    status.textContent = "PLAYER STATUS: PLAYING";
-                } else {
-                    video.pause();
-                    status.textContent = "PLAYER STATUS: PAUSED";
-                }
-            }
-        });
-
-        video.addEventListener("play", () => {
-            window.setTimeout(() => {
-                if (!video.paused && unlocked) maybeShowAd("playing");
-            }, 9000);
-        });
-
-        // Subtitles Filter & Playback Sync
-        const subtitlesData = [
-            { start: 0, end: 3, text: "Clap, clap, clap, clap, clap" },
-            { start: 3.5, end: 7, text: "Cat clapping continuously..." }
-        ];
-
-        video.addEventListener('timeupdate', () => {
-            if (video.paused) return;
-            const time = video.currentTime;
-            let currentText = "";
-
-            if (langSelect.value === 'en') {
-                for (let i = 0; i < subtitlesData.length; i++) {
-                    if (time >= subtitlesData[i].start && time <= subtitlesData[i].end) {
-                        currentText = subtitlesData[i].text.replace(/l/g, 'r').replace(/L/g, 'R');
-                        break;
-                    }
-                }
-            }
-            subDisplay.innerText = currentText;
-        });
-
-        // Fake Product Ads Generator
-        const ads = [
-            { tag: "SQUISHY EMERGENCY", title: "THE 900% SQUISHY", body: "Squeeze it. It remembers. It always remembers.", button: "SQUISH NOW" },
-            { tag: "SLIME CLEARANCE", title: "MIDNIGHT GLOW SLIME", body: "Glows in the dark. Sticks to everything. Including your regrets.", button: "GET THE GOO" },
-            { tag: "LIMITED OFFER", title: "MYSTERY SQUISHY BOX", body: "One box. Three mystery squishies. Zero explanations.", button: "OPEN THE BOX" },
-            { tag: "DO NOT IGNORE", title: "HAUNTED PURPLE SLIME", body: "It bubbles when nobody touches it. Probably normal.", button: "ADD TO CART" },
-            { tag: "FLASH SALE", title: "GIANT STRESS SQUIDGY", body: "For stress caused by suspicious video players.", button: "SQUEEZE DEAL" },
-            { tag: "IMPORTANT PRODUCT NOTICE", title: "UNIDENTIFIED GREEN GOO", body: "We cannot confirm what is inside. The slime has been shipped.", button: "ACCEPT GOO" }
-        ];
-
-        function maybeShowAd(reason) {
-            const ad = ads[adCount % ads.length];
-            adCount++;
-
-            const popup = document.createElement("section");
-            popup.className = "ad-popup";
-            popup.setAttribute("role", "dialog");
-            
-            const left = Math.max(10, (window.innerWidth - 680) / 2 + (Math.random() * 40 - 20));
-            const top = Math.max(10, (window.innerHeight - 420) / 2 + (Math.random() * 40 - 20));
-            popup.style.left = `${left}px`;
-            popup.style.top = `${top}px`;
-
-            popup.innerHTML = `
-                <button class="ad-close" type="button" aria-label="Close advertisement">X</button>
-                <div class="ad-tag">ADVERTISEMENT // ${ad.tag}</div>
-                <h3>${ad.title}</h3>
-                <p>${ad.body}</p>
-                <button class="ad-buy" type="button">${ad.button}</button>
-            `;
-
-            popup.querySelector(".ad-close").addEventListener("click", () => popup.remove());
-            popup.querySelector(".ad-buy").addEventListener("click", () => {
-                popup.querySelector("p").textContent = "THANK YOU. YOUR PURCHASE HAS BEEN RECORDED BY THE VOID.";
-                popup.querySelector(".ad-buy").textContent = "OH NO";
-            });
-
-            adLayer.appendChild(popup);
-
-            window.setTimeout(() => {
-                if (popup.isConnected) popup.remove();
-            }, 18000);
+    // Playback control
+    playBtn.addEventListener("click", async () => {
+        if (!unlocked) {
+            status.textContent = "PLAYER STATUS: ACCESS DENIED";
+            alert("ACCESS DENIED. Submit 67 three times first.");
+            return;
         }
 
-        window.setInterval(() => {
-            if (unlocked && !video.paused) maybeShowAd("timer");
-        }, 22000);
+        try {
+            if (video.paused) {
+                await video.play();
+                playBtn.textContent = "PAUSE";
+                status.textContent = "PLAYER STATUS: PLAYING";
+            } else {
+                video.pause();
+                playBtn.textContent = "PLAY";
+                status.textContent = "PLAYER STATUS: PAUSED";
+            }
+        } catch (error) {
+            console.error("Playback failed:", error);
+            status.textContent = "PLAYER STATUS: VIDEO FILE ERROR";
+            alert("The video could not play. Check that videoplayback.mp4 is beside this HTML file.");
+        }
+    });
 
-    })();
-    </script>
+    video.addEventListener("play", () => { playBtn.textContent = "PAUSE"; });
+    video.addEventListener("pause", () => { playBtn.textContent = "PLAY"; });
+    video.addEventListener("ended", () => {
+        playBtn.textContent = "PLAY";
+        status.textContent = "PLAYER STATUS: VIDEO ENDED. IT IS NOT OVER.";
+        maybeShowAd("ended");
+    });
+    video.addEventListener("error", () => {
+        console.error("Video error:", video.error);
+        status.textContent = "PLAYER STATUS: COULD NOT LOAD VIDEO";
+    });
+
+    // ===== PLINKO SKIP =====
+    const W = canvas.width, H = canvas.height;
+    const slots = [
+        { label: "+10s", color: "#00c853", action: "fwd" },
+        { label: "-20s", color: "#d50000", action: "back" },
+        { label: "RANDOM", color: "#ffd600", action: "rand" },
+        { label: "REFRESH", color: "#aa00ff", action: "refresh" },
+        { label: "-20s", color: "#d50000", action: "back" },
+        { label: "+10s", color: "#00c853", action: "fwd" }
+    ];
+    const slotW = W / slots.length;
+    const slotTop = H - 60;
+    const pegs = [];
+    for (let r = 0; r < 9; r++) {
+        const offset = r % 2 ? slotW / 2 : 0;
+        for (let x = offset; x <= W; x += slotW) {
+            if (x > 8 && x < W - 8) pegs.push({ x, y: 70 + r * 36 });
+        }
+    }
+    let disc = null, rafId = null, busy = false;
+
+    function drawBoard() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "#fff";
+        pegs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.fill(); });
+        slots.forEach((s, i) => {
+            ctx.fillStyle = s.color;
+            ctx.globalAlpha = 0.85;
+            ctx.fillRect(i * slotW + 2, slotTop, slotW - 4, 60);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "#000";
+            ctx.font = "bold 11px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(s.label, i * slotW + slotW / 2, slotTop + 34);
+        });
+        if (disc) {
+            ctx.fillStyle = "cyan";
+            ctx.strokeStyle = "#fff";
+            ctx.beginPath(); ctx.arc(disc.x, disc.y, disc.r, 0, 7); ctx.fill(); ctx.stroke();
+        }
+    }
+
+    function step() {
+        disc.vy += 0.25;
+        disc.x += disc.vx;
+        disc.y += disc.vy;
+        if (disc.x < disc.r) { disc.x = disc.r; disc.vx = Math.abs(disc.vx); }
+        if (disc.x > W - disc.r) { disc.x = W - disc.r; disc.vx = -Math.abs(disc.vx); }
+        for (const p of pegs) {
+            const dx = disc.x - p.x, dy = disc.y - p.y;
+            const dist = Math.hypot(dx, dy), min = disc.r + 5;
+            if (dist < min && dist > 0) {
+                const nx = dx / dist, ny = dy / dist;
+                disc.x = p.x + nx * min;
+                disc.y = p.y + ny * min;
+                const dot = disc.vx * nx + disc.vy * ny;
+                disc.vx = (disc.vx - 2 * dot * nx) * 0.6 + (Math.random() - 0.5) * 1.5;
+                disc.vy = (disc.vy - 2 * dot * ny) * 0.6;
+            }
+        }
+        drawBoard();
+        if (disc.y + disc.r >= slotTop + 10) {
+            const idx = Math.max(0, Math.min(slots.length - 1, Math.floor(disc.x / slotW)));
+            disc = null;
+            drawBoard();
+            resolveSlot(slots[idx]);
+            return;
+        }
+        rafId = requestAnimationFrame(step);
+    }
+
+    function resolveSlot(slot) {
+        const dur = isFinite(video.duration) ? video.duration : 0;
+        const clamp = t => Math.max(0, Math.min(dur || t, t));
+        let text = "";
+        if (slot.action === "fwd") {
+            video.currentTime = clamp(video.currentTime + 10);
+            text = "Lucky! Skipped forward 10 seconds.";
+        } else if (slot.action === "back") {
+            video.currentTime = clamp(video.currentTime - 20);
+            text = "Ouch! Skipped BACKWARD 20 seconds.";
+        } else if (slot.action === "rand") {
+            video.currentTime = Math.random() * dur;
+            text = "Chaos! Jumped to a random timestamp.";
+        } else {
+            text = "Oops... you accidentally refreshed.";
+        }
+        plinkoMsg.textContent = text;
+        status.textContent = "PLAYER STATUS: " + text.toUpperCase();
+        setTimeout(() => {
+            if (slot.action === "refresh") { location.reload(); return; }
+            plinkoModal.style.display = "none";
+            busy = false;
+        }, 1600);
+    }
+
+    canvas.addEventListener("click", event => {
+        if (busy) return;
+        busy = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * (W / rect.width);
+        disc = { x: Math.max(15, Math.min(W - 15, x)), y: 20, vx: (Math.random() - 0.5), vy: 0, r: 9 };
+        plinkoMsg.textContent = "Dropping... good luck.";
+        step();
+    });
+
+    skipBtn.addEventListener("click", () => {
+        if (!unlocked) {
+            status.textContent = "PLAYER STATUS: ACCESS DENIED";
+            alert("ACCESS DENIED. Submit 67 three times first.");
+            return;
+        }
+        if (busy) return;
+        plinkoMsg.textContent = "Click the board to drop your disc!";
+        shuffleSlots();
+        plinkoModal.style.display = "flex";
+        drawBoard();
+    });
+
+    plinkoCancel.addEventListener("click", () => {
+        if (busy) return;
+        plinkoMsg.textContent = "Nice try. Drop the disc.";
+    });
+
+    // ===== EVERYTHING IS OUT OF PLACE =====
+    const misplaced = [status, document.getElementById("video-container"), securityBox, document.querySelector(".controls")];
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    function scatter(reorder) {
+        if (reorder) {
+            [...misplaced].sort(() => Math.random() - 0.5)
+                .forEach(el => document.body.insertBefore(el, adLayer));
+        }
+        const maxX = Math.min(90, window.innerWidth * 0.12);
+        misplaced.forEach(el => {
+            el.style.left = `${rnd(-maxX, maxX)}px`;
+            el.style.top = `${rnd(-25, 25)}px`;
+            el.style.transform = `rotate(${rnd(-5, 5)}deg)`;
+        });
+    }
+    scatter(true);
+    [playBtn, skipBtn, unlockBtn].forEach(b => b.addEventListener("click", () => scatter(false)));
+
+    function shuffleSlots() {
+        slots.sort(() => Math.random() - 0.5);
+    }
+
+    const subtitlesData = [
+        { start: 0, end: 3, text: "Hello! Welcome to my local video." },
+        { start: 3.5, end: 6, text: "I really like watching downloaded files." },
+        { start: 6.5, end: 10, text: "Please let me know if the subtitles look awful." }
+    ];
+
+    function applySubtitleFilter(text) {
+        return langSelect.value === "en"
+            ? text.replace(/l/g, "r").replace(/L/g, "R")
+            : text;
+    }
+
+    video.addEventListener("timeupdate", () => {
+        const current = subtitlesData.find(item =>
+            video.currentTime >= item.start && video.currentTime <= item.end
+        );
+        subDisplay.textContent =
+            langSelect.value === "none" || !current
+                ? ""
+                : applySubtitleFilter(current.text);
+    });
+    langSelect.addEventListener("change", () => {
+        if (langSelect.value === "none") subDisplay.textContent = "";
+    });
+
+    // Fake in-page ads
+    const ads = [
+        { tag: "SQUISHY EMERGENCY", title: "THE 900% SQUISHY", body: "Squeeze it. It remembers. It always remembers.", button: "SQUISH NOW" },
+        { tag: "SLIME CLEARANCE", title: "MIDNIGHT GLOW SLIME", body: "Glows in the dark. Sticks to everything. Including your regrets.", button: "GET THE GOO" },
+        { tag: "LIMITED OFFER", title: "MYSTERY SQUISHY BOX", body: "One box. Three mystery squishies. Zero explanations.", button: "OPEN THE BOX" },
+        { tag: "DO NOT IGNORE", title: "HAUNTED PURPLE SLIME", body: "It bubbles when nobody touches it. Probably normal.", button: "ADD TO CART" },
+        { tag: "FLASH SALE", title: "GIANT STRESS SQUIDGY", body: "For stress caused by suspicious video players.", button: "SQUEEZE DEAL" },
+        { tag: "IMPORTANT PRODUCT NOTICE", title: "UNIDENTIFIED GREEN GOO", body: "We cannot confirm what is inside. The slime has been shipped.", button: "ACCEPT GOO" },
+        { tag: "SPONSORED INTERRUPTION", title: "SQUISHY THAT LOOKS BACK", body: "Soft, slow-rising, and possibly aware of your location. (It is just a toy.)", button: "VIEW SQUISHY" },
+        { tag: "SLIME OF THE DAY", title: "CRUNCHY STAR SLIME", body: "So crunchy your neighbours may ask questions.", button: "CRUNCH IT" }
+    ];
+
+    function maybeShowAd(reason) {
+        const ad = ads[adCount % ads.length];
+        adCount++;
+
+        const popup = document.createElement("section");
+        popup.className = "ad-popup";
+        popup.setAttribute("role", "dialog");
+        popup.setAttribute("aria-label", "Fake squishy and slime advertisement");
+        
+        // Center-oriented randomized placement for big popups
+        const left = Math.max(10, (window.innerWidth - 680) / 2 + (Math.random() * 40 - 20));
+        const top = Math.max(10, (window.innerHeight - 420) / 2 + (Math.random() * 40 - 20));
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+
+        popup.innerHTML = `
+            <button class="ad-close" type="button" aria-label="Close advertisement">X</button>
+            <div class="ad-tag">ADVERTISEMENT // ${ad.tag}</div>
+            <h3>${ad.title}</h3>
+            <p>${ad.body}</p>
+            <button class="ad-buy" type="button">${ad.button}</button>
+        `;
+
+        popup.querySelector(".ad-close").addEventListener("click", () => popup.remove());
+        popup.querySelector(".ad-buy").addEventListener("click", () => {
+            popup.querySelector("p").textContent = "THANK YOU. YOUR PURCHASE HAS BEEN RECORDED BY THE VOID.";
+            popup.querySelector(".ad-buy").textContent = "OH NO";
+        });
+
+        adLayer.appendChild(popup);
+
+        window.setTimeout(() => {
+            if (popup.isConnected) popup.remove();
+        }, 18000);
+    }
+
+    closePopup.addEventListener("click", () => {
+        window.setTimeout(() => maybeShowAd("welcome"), 5000);
+    });
+
+    video.addEventListener("play", () => {
+        window.setTimeout(() => {
+            if (!video.paused && unlocked) maybeShowAd("playing");
+        }, 9000);
+    });
+
+    window.setInterval(() => {
+        if (unlocked && !video.paused && !video.ended) maybeShowAd("timer");
+    }, 22000);
+
+})();
+</script>
 </body>
 </html>
+
+
